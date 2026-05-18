@@ -1,12 +1,9 @@
 // 歌曲发送模块
 // 根据配置把歌曲直链发送为音频 URL、音频 buffer 或文件
 
-import { promises as fs } from 'node:fs'
-import { pathToFileURL } from 'node:url'
-
 import { h, type Session } from 'koishi'
 
-import { downloadSongFile, fetchSongBuffer } from './network'
+import { fetchSongBuffer } from './network'
 import type { Config } from './types'
 
 /** 按配置发送生成提示。 */
@@ -32,14 +29,8 @@ export async function sendSongByMode(session: Session, src: string, config: Conf
       return
     }
     case 'file': {
-      const tempFilePath = await downloadSongFile(src)
-
-      try {
-        await session.send(h.file(pathToFileURL(tempFilePath).href))
-      } finally {
-        await fs.unlink(tempFilePath).catch(() => {})
-      }
-
+      const filename = new URL(src).pathname.split('/').pop() || 'song.mp3'
+      await session.send(h.file(src, { title: filename }))
       return
     }
   }

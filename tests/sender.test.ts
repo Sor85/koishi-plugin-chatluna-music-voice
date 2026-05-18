@@ -1,23 +1,14 @@
 // 歌曲发送模块测试
 // 验证三种发送模式会生成对应 Koishi 消息元素
 
-import { promises as fs } from 'node:fs'
-
 import { h, type Element, type Session } from 'koishi'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Config } from '../src/types'
 import { sendGenerationTip, sendSongByMode } from '../src/sender'
-import { downloadSongFile, fetchSongBuffer } from '../src/network'
-
-vi.mock('node:fs', () => ({
-  promises: {
-    unlink: vi.fn(async () => undefined)
-  }
-}))
+import { fetchSongBuffer } from '../src/network'
 
 vi.mock('../src/network', () => ({
-  downloadSongFile: vi.fn(),
   fetchSongBuffer: vi.fn()
 }))
 
@@ -87,34 +78,17 @@ describe('sendSongByMode', () => {
     expect(audio[0].attrs.src).toContain('data:audio/mpeg;base64,')
   })
 
-  it('downloads and sends file in file mode', async () => {
+  it('sends remote file URL in file mode', async () => {
     const { session, send } = createSession()
-    vi.mocked(downloadSongFile).mockResolvedValue('/tmp/chatluna-music-song.mp3')
 
     await sendSongByMode(session, 'https://cdn.example.com/song.mp3', {
       ...baseConfig,
       sendMode: 'file'
     })
 
-    expect(downloadSongFile).toHaveBeenCalledWith('https://cdn.example.com/song.mp3')
     const sent = send.mock.calls[0][0] as Element
     const file = h.select([sent], 'file')
-    expect(file[0].attrs.src).toBe('file:///tmp/chatluna-music-song.mp3')
-    expect(fs.unlink).toHaveBeenCalledWith('/tmp/chatluna-music-song.mp3')
-  })
-
-  it('still unlinks temp file when session.send fails in file mode', async () => {
-    const send = vi.fn<SendFn>(async () => { throw new Error('send failed') })
-    const session = { send } as Pick<Session, 'send'> as Session
-    vi.mocked(downloadSongFile).mockResolvedValue('/tmp/chatluna-music-song.mp3')
-
-    await expect(
-      sendSongByMode(session, 'https://cdn.example.com/song.mp3', {
-        ...baseConfig,
-        sendMode: 'file'
-      })
-    ).rejects.toThrow('send failed')
-
-    expect(fs.unlink).toHaveBeenCalledWith('/tmp/chatluna-music-song.mp3')
+    expect(file[0].attrs.src).toBe('https://cdn.example.com/song.mp3')
+    expect(file[0].attrs.title).toBe('song.mp3')
   })
 })

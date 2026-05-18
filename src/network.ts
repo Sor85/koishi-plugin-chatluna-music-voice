@@ -1,11 +1,6 @@
 // 网易云音乐网络请求模块
 // 负责搜索歌曲、解析 Meting 直链并下载音频内容
 
-import { promises as fs } from 'node:fs'
-import crypto from 'node:crypto'
-import os from 'node:os'
-import path from 'node:path'
-
 import {
   DOWNLOAD_TIMEOUT_MS,
   PRESET_METING_APIS,
@@ -234,15 +229,6 @@ function buildMetingUrl(baseUrl: string, songId: number) {
   return url.toString()
 }
 
-function resolveExtension(contentType: string | null) {
-  if (!contentType) return '.mp3'
-  if (contentType.includes('audio/mpeg')) return '.mp3'
-  if (contentType.includes('audio/mp4')) return '.m4a'
-  if (contentType.includes('audio/wav')) return '.wav'
-  if (contentType.includes('audio/flac')) return '.flac'
-  return '.mp3'
-}
-
 /** 搜索网易云音乐歌曲。 */
 export async function searchNetEase(
   _config: Config,
@@ -286,24 +272,6 @@ export async function fetchSongBuffer(targetUrl: string) {
   try {
     const result = await requestArrayBuffer(targetUrl, controller.signal)
     return result.buffer
-  } finally {
-    disposeTimeout()
-    controller.abort()
-  }
-}
-
-/** 下载歌曲音频为临时文件并返回文件路径。 */
-export async function downloadSongFile(targetUrl: string) {
-  const controller = new AbortController()
-  const disposeTimeout = createAbortTimeout(controller, DOWNLOAD_TIMEOUT_MS)
-
-  try {
-    const result = await requestArrayBuffer(targetUrl, controller.signal)
-    const filename = `${crypto.randomBytes(8).toString('hex')}${resolveExtension(result.contentType)}`
-    const filePath = path.join(os.tmpdir(), filename)
-
-    await fs.writeFile(filePath, result.buffer)
-    return filePath
   } finally {
     disposeTimeout()
     controller.abort()
