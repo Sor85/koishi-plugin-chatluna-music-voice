@@ -102,23 +102,54 @@ async function raceRequests<T>(
   }
 }
 
-/** 解析网易云搜索响应为内部歌曲列表。 */
+/** 校验单条搜索结果字段完整性 */
+function isValidSongItem(item: unknown): item is {
+  id: number
+  name: string
+  artists: Array<{ name: string }>
+  album: { name: string }
+  duration: number
+} {
+  if (typeof item !== 'object' || item === null) return false
+  const s = item as Record<string, unknown>
+  if (typeof s.id !== 'number') return false
+  if (typeof s.name !== 'string') return false
+  if (typeof s.duration !== 'number') return false
+  if (!Array.isArray(s.artists)) return false
+  if (typeof s.album !== 'object' || s.album === null) return false
+  if (typeof (s.album as Record<string, unknown>).name !== 'string') return false
+  for (const artist of s.artists) {
+    if (typeof artist !== 'object' || artist === null) return false
+    if (typeof (artist as Record<string, unknown>).name !== 'string') return false
+  }
+  return true
+}
+
+/** 解析网易云搜索响应为内部歌曲列表，跳过字段不完整的条目。 */
 export function parseSearchResponse(content: string) {
   try {
-    const parsed = JSON.parse(content) as NetEaseSearchResponse
-    const songs = parsed.result?.songs
+    const parsed: unknown = JSON.parse(content)
 
-    if (!Array.isArray(songs)) {
-      return null
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const result = (parsed as Record<string, unknown>).result
+    if (typeof result !== 'object' || result === null) return null
+    const songs = (result as Record<string, unknown>).songs
+    if (!Array.isArray(songs)) return null
+
+    const valid: SongData[] = []
+
+    for (const song of songs) {
+      if (!isValidSongItem(song)) continue
+      valid.push({
+        id: song.id,
+        name: song.name,
+        artists: song.artists.map((artist) => artist.name).join('/'),
+        albumName: song.album.name,
+        duration: song.duration
+      })
     }
 
-    return songs.map<SongData>((song) => ({
-      id: song.id,
-      name: song.name,
-      artists: song.artists.map((artist) => artist.name).join('/'),
-      albumName: song.album.name,
-      duration: song.duration
-    }))
+    return valid.length > 0 ? valid : null
   } catch {
     return null
   }
@@ -162,9 +193,13 @@ export function parseMetingUrl(content: string) {
   return null
 }
 
+/** 构造 Meting API 请求 URL，安全处理 query 和 hash。 */
 function buildMetingUrl(baseUrl: string, songId: number) {
-  const separator = baseUrl.includes('?') ? '&' : '?'
-  return `${baseUrl}${separator}type=url&id=${songId}`
+  const url = new URL(baseUrl)
+  url.searchParams.set('type', 'url')
+  url.searchParams.set('id', String(songId))
+  url.hash = ''
+  return url.toString()
 }
 
 function resolveExtension(contentType: string | null) {

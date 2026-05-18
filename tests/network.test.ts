@@ -60,6 +60,33 @@ describe('parseSearchResponse', () => {
   it('returns null for invalid search JSON', () => {
     expect(parseSearchResponse('not json')).toBeNull()
   })
+
+  it('skips bad items and keeps good ones', () => {
+    const result = parseSearchResponse(JSON.stringify({
+      result: {
+        songs: [
+          { id: 1, name: '坏歌', duration: 100 },
+          { id: 2, name: '好歌', artists: [{ name: '歌手' }], album: { name: '专辑' }, duration: 200 }
+        ]
+      }
+    }))
+
+    expect(result).toEqual([{
+      id: 2,
+      name: '好歌',
+      artists: '歌手',
+      albumName: '专辑',
+      duration: 200
+    }])
+  })
+
+  it('returns null when all items are invalid', () => {
+    const result = parseSearchResponse(JSON.stringify({
+      result: { songs: [{ id: 1 }] }
+    }))
+
+    expect(result).toBeNull()
+  })
 })
 
 describe('parseMetingUrl', () => {
@@ -111,8 +138,22 @@ describe('resolveSongSource', () => {
       customMetingApi: 'https://music.example.com/meting'
     }, 123, logger)).resolves.toBe('https://cdn.example.com/song.mp3')
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(String((fetchMock.mock.calls as any)[0][0])).toBe('https://music.example.com/meting?type=url&id=123')
+    const expectedUrl = 'https://music.example.com/meting?type=url&id=123'
+    expect(fetchMock).toHaveBeenCalledWith(expectedUrl, expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) }))
+  })
+
+  it('overwrites existing query and strips hash from custom URL', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"url":"https://cdn.example.com/song.mp3"}'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(resolveSongSource({
+      ...baseConfig,
+      sourceMode: 'custom',
+      customMetingApi: 'https://music.example.com/meting?foo=bar&type=old#frag'
+    }, 123, logger)).resolves.toBe('https://cdn.example.com/song.mp3')
+
+    const expectedUrl = 'https://music.example.com/meting?foo=bar&type=url&id=123'
+    expect(fetchMock).toHaveBeenCalledWith(expectedUrl, expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) }))
   })
 })
 
