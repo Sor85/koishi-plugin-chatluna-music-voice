@@ -18,11 +18,19 @@ describe('selectBestSong', () => {
   })
 
   it('uses artist token to improve selection', () => {
-    expect(selectBestSong(songs, '周杰伦 晴天')).toEqual(songs[1])
+    const candidates: SongData[] = [
+      { id: 10, name: '匆匆那年', artists: '王菲', albumName: '专辑A', duration: 240000 },
+      { id: 11, name: '匆匆那年', artists: '张学友', albumName: '专辑B', duration: 250000 }
+    ]
+    expect(selectBestSong(candidates, '王菲 匆匆那年')).toEqual(candidates[0])
   })
 
   it('falls back to the first song when nothing matches', () => {
     expect(selectBestSong(songs, '完全不存在')).toEqual(songs[0])
+  })
+
+  it('falls back to the first song for a blank query', () => {
+    expect(selectBestSong(songs, '   ')).toEqual(songs[0])
   })
 
   it('returns undefined for an empty list', () => {

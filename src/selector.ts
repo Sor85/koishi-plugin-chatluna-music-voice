@@ -17,6 +17,11 @@ function splitTokens(value: string) {
 
 function scoreSong(song: SongData, query: string) {
   const normalizedQuery = normalize(query)
+
+  if (!normalizedQuery) {
+    return 0
+  }
+
   const normalizedName = normalize(song.name)
   const normalizedArtists = normalize(song.artists)
   const tokens = splitTokens(query)
