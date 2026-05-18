@@ -11,7 +11,6 @@ export interface Config {
   sourceMode: SourceMode
   customMetingApi: string
   sendMode: SendMode
-  generationTip: string
   debug: boolean
 }
 

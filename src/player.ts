@@ -4,21 +4,19 @@
 import type { Session } from 'koishi'
 
 import { searchNetEase, resolveSongSource } from './network'
-import { sendGenerationTip, sendSongByMode } from './sender'
+import { sendSongByMode } from './sender'
 import type { Config, PluginLogger, SendMode, SongData } from './types'
 
 /** 音乐播放流程的可替换依赖，便于测试和解耦。 */
 export interface PlayNeteaseMusicDependencies {
   search: typeof searchNetEase
   resolveSource: typeof resolveSongSource
-  sendTip: typeof sendGenerationTip
   send: typeof sendSongByMode
 }
 
 const defaultDependencies: PlayNeteaseMusicDependencies = {
   search: searchNetEase,
   resolveSource: resolveSongSource,
-  sendTip: sendGenerationTip,
   send: sendSongByMode
 }
 
@@ -48,12 +46,6 @@ async function sendSelectedSong(
   } catch (error) {
     logger.warn('歌曲直链获取失败', error)
     return '找到了歌曲，但暂时无法获取播放地址。'
-  }
-
-  try {
-    await deps.sendTip(session, config.generationTip)
-  } catch (error) {
-    logger.warn('生成提示发送失败', error)
   }
 
   try {

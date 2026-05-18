@@ -6,17 +6,6 @@ import { h, type Session } from 'koishi'
 import { fetchSongBuffer } from './network'
 import type { Config } from './types'
 
-/** 按配置发送生成提示。 */
-export async function sendGenerationTip(session: Session, tip: string) {
-  const normalized = tip.trim()
-
-  if (!normalized) {
-    return
-  }
-
-  await session.send(h.text(normalized))
-}
-
 /** 按配置发送歌曲。 */
 export async function sendSongByMode(session: Session, src: string, config: Config) {
   switch (config.sendMode) {

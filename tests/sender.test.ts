@@ -5,7 +5,7 @@ import { h, type Element, type Session } from 'koishi'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Config } from '../src/types'
-import { sendGenerationTip, sendSongByMode } from '../src/sender'
+import { sendSongByMode } from '../src/sender'
 import { fetchSongBuffer } from '../src/network'
 
 vi.mock('../src/network', () => ({
@@ -18,7 +18,6 @@ const baseConfig: Config = {
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
-  generationTip: '',
   debug: false
 }
 
@@ -32,24 +31,6 @@ function createSession() {
 
 afterEach(() => {
   vi.clearAllMocks()
-})
-
-describe('sendGenerationTip', () => {
-  it('sends no message for empty tip', async () => {
-    const { session, send } = createSession()
-
-    await sendGenerationTip(session, '   ')
-
-    expect(send).not.toHaveBeenCalled()
-  })
-
-  it('sends a text tip when configured', async () => {
-    const { session, send } = createSession()
-
-    await sendGenerationTip(session, '正在找歌…')
-
-    expect(String(send.mock.calls[0][0])).toContain('正在找歌')
-  })
 })
 
 describe('sendSongByMode', () => {

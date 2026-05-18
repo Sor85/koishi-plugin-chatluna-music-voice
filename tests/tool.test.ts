@@ -13,7 +13,6 @@ const config: Config = {
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
-  generationTip: '',
   debug: false
 }
 

@@ -16,10 +16,7 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
       .max(10)
       .step(1)
       .description('每次搜索返回的候选歌曲数量')
-      .default(5),
-    generationTip: Schema.string()
-      .description('发送歌曲前额外发送的提示文字，留空则不发送提示')
-      .default('')
+      .default(5)
   }).description('基础设置'),
 
   Schema.object({

@@ -20,7 +20,6 @@ const config: Config = {
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
-  generationTip: '',
   debug: false
 }
 
@@ -49,7 +48,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -65,7 +63,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
       resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -86,7 +83,6 @@ describe('playNeteaseMusic', () => {
       resolveSource: vi.fn(async (_cfg: Config, id: number) =>
         id === anotherSong.id ? 'https://cdn.example.com/live.mp3' : ''
       ),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -101,7 +97,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -121,7 +116,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => ''),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -135,7 +129,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => []),
       resolveSource: vi.fn(async () => ''),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -149,7 +142,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => ''),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -163,7 +155,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => { throw new Error('source failed') }),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -177,7 +168,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => { throw new Error('send failed') })
     } satisfies PlayNeteaseMusicDependencies
 
@@ -189,7 +179,6 @@ describe('playNeteaseMusic', () => {
     const deps = {
       search: vi.fn(async () => { throw new Error('network failed') }),
       resolveSource: vi.fn(async () => ''),
-      sendTip: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined)
     } satisfies PlayNeteaseMusicDependencies
 
@@ -197,18 +186,4 @@ describe('playNeteaseMusic', () => {
       .resolves.toBe('音乐服务暂时不可用。')
   })
 
-  it('continues sending when sendTip fails but send succeeds', async () => {
-    const deps = {
-      search: vi.fn(async () => [song]),
-      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
-      sendTip: vi.fn(async () => { throw new Error('tip failed') }),
-      send: vi.fn(async () => undefined)
-    } satisfies PlayNeteaseMusicDependencies
-
-    await expect(playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps))
-      .resolves.toBe('已发送：晴天 - 周杰伦')
-
-    expect(deps.send).toHaveBeenCalledWith(session, 'https://cdn.example.com/song.mp3', singleConfig)
-    expect(logger.warn).toHaveBeenCalledWith('生成提示发送失败', expect.any(Error))
-  })
 })
