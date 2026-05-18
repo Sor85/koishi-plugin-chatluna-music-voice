@@ -20,7 +20,7 @@ const logger: PluginLogger = {
 }
 
 const baseConfig: Config = {
-  toolName: 'play_netease_music_as_voice',
+  toolName: 'music_voice',
   searchLimit: 5,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',

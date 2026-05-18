@@ -1,17 +1,15 @@
 // 音乐播放主流程
-// 串联搜索、选歌、直链解析和消息发送
+// 串联搜索、候选歌单、选歌、直链解析和消息发送
 
 import type { Session } from 'koishi'
 
 import { searchNetEase, resolveSongSource } from './network'
-import { selectBestSong } from './selector'
 import { sendGenerationTip, sendSongByMode } from './sender'
 import type { Config, PluginLogger, SongData } from './types'
 
 /** 音乐播放流程的可替换依赖，便于测试和解耦。 */
 export interface PlayNeteaseMusicDependencies {
   search: typeof searchNetEase
-  select: (songs: SongData[], query: string) => SongData | undefined
   resolveSource: typeof resolveSongSource
   sendTip: typeof sendGenerationTip
   send: typeof sendSongByMode
@@ -19,46 +17,29 @@ export interface PlayNeteaseMusicDependencies {
 
 const defaultDependencies: PlayNeteaseMusicDependencies = {
   search: searchNetEase,
-  select: selectBestSong,
   resolveSource: resolveSongSource,
   sendTip: sendGenerationTip,
   send: sendSongByMode
 }
 
-/** 搜索并发送一首网易云音乐。 */
-export async function playNeteaseMusic(
+/** 格式化候选歌曲列表。 */
+function formatCandidateList(songs: SongData[]): string {
+  const lines = songs
+    .map((s, i) => `${i + 1}. ${s.name} - ${s.artists}（${s.albumName}）`)
+    .join('\n')
+  return (
+    `找到以下候选歌曲：\n${lines}\n\n请根据用户想听的歌曲，再次调用本工具并传入对应 index。`
+  )
+}
+
+/** 解析直链并发送指定歌曲，返回操作结果文本。 */
+async function sendSelectedSong(
   session: Session,
   config: Config,
-  query: string,
+  selected: SongData,
   logger: PluginLogger,
-  deps: PlayNeteaseMusicDependencies = defaultDependencies
-) {
-  const normalizedQuery = query.trim()
-
-  if (!normalizedQuery) {
-    return '没有找到合适歌曲。'
-  }
-
-  let songs: SongData[]
-
-  try {
-    songs = await deps.search(config, normalizedQuery, config.searchLimit, logger)
-  } catch (error) {
-    logger.warn('网易云搜索失败', error)
-    return '音乐服务暂时不可用。'
-  }
-
-  if (songs.length < 1) {
-    logger.debug('网易云搜索无结果', normalizedQuery)
-    return '没有找到合适歌曲。'
-  }
-
-  const selected = deps.select(songs, normalizedQuery)
-
-  if (!selected) {
-    return '没有找到合适歌曲。'
-  }
-
+  deps: PlayNeteaseMusicDependencies
+): Promise<string> {
   let src: string
 
   try {
@@ -83,4 +64,46 @@ export async function playNeteaseMusic(
 
   logger.info('已发送歌曲', `${selected.name} - ${selected.artists}`)
   return `已发送：${selected.name} - ${selected.artists}`
+}
+
+/** 搜索并发送一首网易云音乐。 */
+export async function playNeteaseMusic(
+  session: Session,
+  config: Config,
+  query: string,
+  logger: PluginLogger,
+  index?: number,
+  deps: PlayNeteaseMusicDependencies = defaultDependencies
+) {
+  const normalizedQuery = query.trim()
+
+  if (!normalizedQuery) {
+    return '没有找到合适歌曲。'
+  }
+
+  let songs: SongData[]
+
+  try {
+    songs = await deps.search(config, normalizedQuery, config.searchLimit, logger)
+  } catch (error) {
+    logger.warn('网易云搜索失败', error)
+    return '音乐服务暂时不可用。'
+  }
+
+  if (songs.length < 1) {
+    logger.debug('网易云搜索无结果', normalizedQuery)
+    return '没有找到合适歌曲。'
+  }
+
+  if (config.searchLimit > 1) {
+    if (index === undefined) {
+      return formatCandidateList(songs)
+    }
+    if (index < 1 || index > songs.length) {
+      return `序号无效，请选择 1-${songs.length} 之间的数字。`
+    }
+    return sendSelectedSong(session, config, songs[index - 1], logger, deps)
+  }
+
+  return sendSelectedSong(session, config, songs[0], logger, deps)
 }

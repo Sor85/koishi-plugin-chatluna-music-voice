@@ -1,7 +1,7 @@
 {
-  "name": "koishi-plugin-chatluna-music",
-  "description": "Let ChatLuna characters search NetEase Music and send songs as voice messages.",
-  "version": "0.1.0",
+  "name": "koishi-plugin-chatluna-music-voice",
+  "description": "为 ChatLuna 提供搜索网易云音乐并以语音消息的形式发送歌曲的工具。",
+  "version": "0.0.1",
   "main": "lib/src/index.js",
   "typings": "lib/src/index.d.ts",
   "files": ["lib", "src"],
@@ -15,8 +15,8 @@
   },
   "koishi": {
     "description": {
-      "zh": "让 ChatLuna 角色自主搜索网易云音乐并发送为语音。",
-      "en": "Let ChatLuna characters search NetEase Music and send songs as voice messages."
+      "zh": "为 ChatLuna 提供搜索网易云音乐并以语音消息的形式发送歌曲的工具。",
+      "en": "Provide ChatLuna with a tool to search NetEase Music and send songs as voice messages."
     },
     "service": {
       "required": ["chatluna"]

@@ -38,13 +38,13 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
 
   Schema.object({
     sendMode: Schema.union([
-      Schema.const('audio-url').description('直接发送远程音频链接'),
       Schema.const('audio-buffer').description('下载音频后发送 buffer'),
+      Schema.const('audio-url').description('直接发送远程音频链接'),
       Schema.const('file').description('下载临时文件后作为文件发送')
     ])
       .role('radio')
       .description('歌曲发送方式')
-      .default('audio-url')
+      .default('audio-buffer')
   }).description('发送设置'),
 
   Schema.object({

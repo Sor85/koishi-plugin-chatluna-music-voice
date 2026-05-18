@@ -16,7 +16,13 @@ const musicToolSchema = z.object({
   query: z
     .string()
     .min(1)
-    .describe('Song name, artist name, style, or natural language music search query.')
+    .describe('Song name, artist name, style, or natural language music search query.'),
+  index: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Candidate song number from the previous result list, starting from 1.')
 })
 
 /** 搜索并发送网易云音乐的实际执行函数签名。 */
@@ -24,7 +30,8 @@ export type PlayMusicFunction = (
   session: Session,
   config: Config,
   query: string,
-  logger: PluginLogger
+  logger: PluginLogger,
+  index?: number
 ) => Promise<string>
 
 /** ChatLuna 网易云音乐语音工具，通过 query 搜索网易云音乐并在当前聊天发送整首音频/语音。 */
@@ -36,7 +43,7 @@ export class ChatLunaMusicTool extends StructuredTool<
 > {
   name: string
   description =
-    'Search NetEase Music with a query and send the selected full song as an audio or voice message in the current chat. Use this when the conversation naturally calls for playing music. The only input is query.'
+    'Search NetEase Music with a query. If the tool returns a numbered candidate list, call it again with the same query and the chosen index to send that full song as audio or voice in the current chat. Input is query and optional index.'
   schema = musicToolSchema
 
   constructor(
@@ -59,7 +66,7 @@ export class ChatLunaMusicTool extends StructuredTool<
       return '音乐工具无法获取当前会话。'
     }
 
-    return await this.playMusic(session, this.config, input.query, this.logger)
+    return await this.playMusic(session, this.config, input.query, this.logger, input.index)
   }
 }
 
