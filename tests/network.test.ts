@@ -171,6 +171,18 @@ describe('resolveSongSource', () => {
     const expectedUrl = 'https://music.example.com/meting?foo=bar&type=url&id=123'
     expect(fetchMock).toHaveBeenCalledWith(expectedUrl, expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) }))
   })
+
+  it('accepts a direct media response from Meting API', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), {
+      headers: { 'content-type': 'audio/mpeg' }
+    })))
+
+    await expect(resolveSongSource({
+      ...baseConfig,
+      sourceMode: 'custom',
+      customMetingApi: 'https://music.example.com/meting'
+    }, 123, logger)).resolves.toBe('https://music.example.com/meting?type=url&id=123')
+  })
 })
 
 describe('fetchSongBuffer', () => {

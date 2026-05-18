@@ -24,6 +24,14 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
 
+function summarizeRaceError(error: unknown) {
+  if (error instanceof AggregateError) {
+    return error.errors.map(getErrorMessage).join('；')
+  }
+
+  return getErrorMessage(error)
+}
+
 function createAbortTimeout(controller: AbortController, timeoutMs: number) {
   const timeout = setTimeout(() => controller.abort(REQUEST_TIMEOUT_REASON), timeoutMs)
   return () => clearTimeout(timeout)
@@ -34,6 +42,29 @@ async function requestText(targetUrl: string, signal: AbortSignal) {
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
+  }
+
+  return await response.text()
+}
+
+function isMediaContentType(contentType: string | null) {
+  if (!contentType) return false
+  const normalized = contentType.toLowerCase()
+  return normalized.startsWith('audio/')
+    || normalized.startsWith('video/')
+    || normalized.includes('application/octet-stream')
+}
+
+async function requestSource(targetUrl: string, signal: AbortSignal) {
+  const response = await fetch(targetUrl, { method: 'GET', signal })
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+
+  if (isMediaContentType(response.headers.get('content-type'))) {
+    await response.body?.cancel()
+    return response.url || targetUrl
   }
 
   return await response.text()
@@ -93,8 +124,9 @@ async function raceRequests<T>(
   try {
     return await Promise.any(tasks)
   } catch (error) {
-    logger.error(`${description} 全部失败`, error)
-    throw error
+    const summary = summarizeRaceError(error)
+    logger.warn(`${description} 全部失败`, summary)
+    throw new Error(summary)
   } finally {
     for (const controller of controllers) {
       controller.abort()
@@ -239,7 +271,7 @@ export async function resolveSongSource(config: Config, songId: number, logger: 
     const targetUrl = buildMetingUrl(api, songId)
     return {
       label: new URL(api).host,
-      run: (signal) => requestText(targetUrl, signal)
+      run: (signal) => requestSource(targetUrl, signal)
     }
   })
 
