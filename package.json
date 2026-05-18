@@ -8,9 +8,10 @@
   "license": "MIT",
   "keywords": ["chatbot", "koishi", "plugin", "chatluna", "music", "voice", "netease"],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf lib && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "npm run build"
   },
   "koishi": {
     "description": {
