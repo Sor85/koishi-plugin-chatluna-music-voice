@@ -1,7 +1,7 @@
 // 音乐请求常量
 // 集中维护预设 Meting API 和网络超时时间
 
-export const DEFAULT_TOOL_NAME = 'play_netease_music_as_voice'
+export const DEFAULT_TOOL_NAME = 'music_voice'
 
 export const PRESET_METING_APIS = [
   'https://api.injahow.cn/meting/',

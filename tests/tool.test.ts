@@ -8,7 +8,7 @@ import type { Config, PluginLogger } from '../src/types'
 import { ChatLunaMusicTool, registerChatLunaMusicTool } from '../src/tool'
 
 const config: Config = {
-  toolName: 'play_netease_music_as_voice',
+  toolName: 'music_voice',
   searchLimit: 5,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
@@ -33,18 +33,18 @@ describe('ChatLunaMusicTool', () => {
     )
   })
 
-  it('passes query and session to play function', async () => {
+  it('passes query, index and session to play function', async () => {
     const session = { userId: '10001' } as Session
     const play = vi.fn(async () => '已发送：晴天 - 周杰伦')
     const tool = new ChatLunaMusicTool(config, logger, play)
 
     await expect(
-      tool._call({ query: '晴天' }, undefined, {
+      tool._call({ query: '晴天', index: 2 }, undefined, {
         configurable: { session }
       })
     ).resolves.toBe('已发送：晴天 - 周杰伦')
 
-    expect(play).toHaveBeenCalledWith(session, config, '晴天', logger)
+    expect(play).toHaveBeenCalledWith(session, config, '晴天', logger, 2)
   })
 })
 
@@ -64,7 +64,7 @@ describe('registerChatLunaMusicTool', () => {
 
     expect(result).toBe(dispose)
     expect(registerTool).toHaveBeenCalledWith(
-      'play_netease_music_as_voice',
+      'music_voice',
       expect.objectContaining({
         createTool: expect.any(Function),
         selector: expect.any(Function)

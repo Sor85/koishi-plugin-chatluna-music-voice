@@ -17,6 +17,7 @@ export interface Config {
 
 export interface MusicToolInput {
   query: string
+  index?: number
 }
 
 export interface SongData {
