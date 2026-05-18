@@ -39,6 +39,8 @@ export async function sendSongByMode(session: Session, src: string, config: Conf
       } finally {
         await fs.unlink(tempFilePath).catch(() => {})
       }
+
+      return
     }
   }
 }

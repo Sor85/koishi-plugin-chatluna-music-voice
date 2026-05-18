@@ -4,6 +4,11 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      koishi: '@koishijs/core'
+    }
+  },
   test: {
     environment: 'node',
     globals: false,
