@@ -5,7 +5,7 @@ import type { Session } from 'koishi'
 
 import { searchNetEase, resolveSongSource } from './network'
 import { sendGenerationTip, sendSongByMode } from './sender'
-import type { Config, PluginLogger, SongData } from './types'
+import type { Config, PluginLogger, SendMode, SongData } from './types'
 
 /** 音乐播放流程的可替换依赖，便于测试和解耦。 */
 export interface PlayNeteaseMusicDependencies {
@@ -38,7 +38,8 @@ async function sendSelectedSong(
   config: Config,
   selected: SongData,
   logger: PluginLogger,
-  deps: PlayNeteaseMusicDependencies
+  deps: PlayNeteaseMusicDependencies,
+  sendMode?: SendMode
 ): Promise<string> {
   let src: string
 
@@ -56,7 +57,7 @@ async function sendSelectedSong(
   }
 
   try {
-    await deps.send(session, src, config)
+    await deps.send(session, src, sendMode === undefined ? config : { ...config, sendMode })
   } catch (error) {
     logger.error('歌曲语音发送失败', error)
     return '找到了歌曲，但语音发送失败。'
@@ -73,8 +74,19 @@ export async function playNeteaseMusic(
   query: string,
   logger: PluginLogger,
   index?: number,
-  deps: PlayNeteaseMusicDependencies = defaultDependencies
+  sendModeOrDeps?: SendMode | PlayNeteaseMusicDependencies,
+  depsOrSendMode?: PlayNeteaseMusicDependencies | SendMode
 ) {
+  const sendMode = typeof sendModeOrDeps === 'string'
+    ? sendModeOrDeps
+    : typeof depsOrSendMode === 'string'
+      ? depsOrSendMode
+      : undefined
+  const deps = typeof sendModeOrDeps === 'object'
+    ? sendModeOrDeps
+    : typeof depsOrSendMode === 'object'
+      ? depsOrSendMode
+      : defaultDependencies
   const normalizedQuery = query.trim()
 
   if (!normalizedQuery) {
@@ -102,8 +114,8 @@ export async function playNeteaseMusic(
     if (index < 1 || index > songs.length) {
       return `序号无效，请选择 1-${songs.length} 之间的数字。`
     }
-    return sendSelectedSong(session, config, songs[index - 1], logger, deps)
+    return sendSelectedSong(session, config, songs[index - 1], logger, deps, sendMode)
   }
 
-  return sendSelectedSong(session, config, songs[0], logger, deps)
+  return sendSelectedSong(session, config, songs[0], logger, deps, sendMode)
 }

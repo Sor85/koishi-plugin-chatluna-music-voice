@@ -1,5 +1,5 @@
 // ChatLuna 工具注册测试
-// 验证工具注册、元数据、query 输入和当前 session 读取
+// 验证工具注册、元数据、query 输入、发送方式和当前 session 读取
 
 import type { Context, Session } from 'koishi'
 import { describe, expect, it, vi } from 'vitest'
@@ -33,18 +33,18 @@ describe('ChatLunaMusicTool', () => {
     )
   })
 
-  it('passes query, index and session to play function', async () => {
+  it('passes query, index, send mode and session to play function', async () => {
     const session = { userId: '10001' } as Session
     const play = vi.fn(async () => '已发送：晴天 - 周杰伦')
     const tool = new ChatLunaMusicTool(config, logger, play)
 
     await expect(
-      tool._call({ query: '晴天', index: 2 }, undefined, {
+      tool._call({ query: '晴天', index: 2, sendMode: 'file' }, undefined, {
         configurable: { session }
       })
     ).resolves.toBe('已发送：晴天 - 周杰伦')
 
-    expect(play).toHaveBeenCalledWith(session, config, '晴天', logger, 2)
+    expect(play).toHaveBeenCalledWith(session, config, '晴天', logger, 2, 'file')
   })
 })
 

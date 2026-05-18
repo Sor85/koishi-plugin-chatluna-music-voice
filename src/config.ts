@@ -43,7 +43,7 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
       Schema.const('file').description('把远程音频链接作为文件发送')
     ])
       .role('radio')
-      .description('歌曲发送方式')
+      .description('默认歌曲发送方式，AI 调用工具时可临时选择其他发送方式')
       .default('audio-buffer')
   }).description('发送设置'),
 

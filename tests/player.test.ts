@@ -97,6 +97,26 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).toHaveBeenCalledWith(session, 'https://cdn.example.com/live.mp3', config)
   })
 
+  it('uses requested send mode for current tool call without changing default config', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
+      sendTip: vi.fn(async () => undefined),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps, 'file')
+    ).resolves.toBe('已发送：晴天 - 周杰伦')
+
+    expect(deps.send).toHaveBeenCalledWith(
+      session,
+      'https://cdn.example.com/song.mp3',
+      { ...singleConfig, sendMode: 'file' }
+    )
+    expect(singleConfig.sendMode).toBe('audio-url')
+  })
+
   it('returns range error when index is out of bounds', async () => {
     const deps = {
       search: vi.fn(async () => [song]),

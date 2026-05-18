@@ -18,6 +18,7 @@ export interface Config {
 export interface MusicToolInput {
   query: string
   index?: number
+  sendMode?: SendMode
 }
 
 export interface SongData {

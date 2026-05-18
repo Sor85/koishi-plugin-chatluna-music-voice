@@ -37,7 +37,11 @@ const musicToolSchema = z.object({
     .int()
     .min(1)
     .optional()
-    .describe('Candidate song number from the previous result list, starting from 1.')
+    .describe('Candidate song number from the previous result list, starting from 1.'),
+  sendMode: z
+    .enum(['audio-buffer', 'audio-url', 'file'])
+    .optional()
+    .describe('Optional song sending mode for this call. audio-buffer sends voice after downloading audio, audio-url sends the remote audio URL as text, and file sends the remote audio URL as a file. Omit it to use the default mode configured in Koishi.')
 })
 
 /** 搜索并发送网易云音乐的实际执行函数签名。 */
@@ -46,7 +50,8 @@ export type PlayMusicFunction = (
   config: Config,
   query: string,
   logger: PluginLogger,
-  index?: number
+  index?: number,
+  sendMode?: MusicToolInput['sendMode']
 ) => Promise<string>
 
 /** ChatLuna 网易云音乐语音工具，通过 query 搜索网易云音乐并在当前聊天发送整首音频/语音。 */
@@ -81,7 +86,14 @@ export class ChatLunaMusicTool extends StructuredTool<
       return '音乐工具无法获取当前会话。'
     }
 
-    return await this.playMusic(session, this.config, input.query, this.logger, input.index)
+    return await this.playMusic(
+      session,
+      this.config,
+      input.query,
+      this.logger,
+      input.index,
+      input.sendMode
+    )
   }
 }
 
