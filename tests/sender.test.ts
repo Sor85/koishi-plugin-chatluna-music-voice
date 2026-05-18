@@ -53,14 +53,14 @@ describe('sendGenerationTip', () => {
 })
 
 describe('sendSongByMode', () => {
-  it('sends remote audio URL in audio-url mode', async () => {
+  it('sends remote audio URL as text in audio-url mode', async () => {
     const { session, send } = createSession()
 
     await sendSongByMode(session, 'https://cdn.example.com/song.mp3', baseConfig)
 
     const sent = send.mock.calls[0][0] as Element
-    const audio = h.select([sent], 'audio')
-    expect(audio[0].attrs.src).toBe('https://cdn.example.com/song.mp3')
+    expect(String(sent)).toBe('https://cdn.example.com/song.mp3')
+    expect(h.select([sent], 'audio')).toHaveLength(0)
   })
 
   it('downloads and sends buffer in audio-buffer mode', async () => {

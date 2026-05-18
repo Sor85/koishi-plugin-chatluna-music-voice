@@ -21,7 +21,7 @@ export async function sendGenerationTip(session: Session, tip: string) {
 export async function sendSongByMode(session: Session, src: string, config: Config) {
   switch (config.sendMode) {
     case 'audio-url':
-      await session.send(h.audio(src))
+      await session.send(h.text(src))
       return
     case 'audio-buffer': {
       const buffer = await fetchSongBuffer(src)
