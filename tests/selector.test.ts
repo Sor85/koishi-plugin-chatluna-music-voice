@@ -19,10 +19,10 @@ describe('selectBestSong', () => {
 
   it('uses artist token to improve selection', () => {
     const candidates: SongData[] = [
-      { id: 10, name: '匆匆那年', artists: '王菲', albumName: '专辑A', duration: 240000 },
-      { id: 11, name: '匆匆那年', artists: '张学友', albumName: '专辑B', duration: 250000 }
+      { id: 4, name: '匆匆那年', artists: '张学友', albumName: '翻唱', duration: 240000 },
+      { id: 5, name: '匆匆那年', artists: '王菲', albumName: '匆匆那年', duration: 235000 }
     ]
-    expect(selectBestSong(candidates, '王菲 匆匆那年')).toEqual(candidates[0])
+    expect(selectBestSong(candidates, '王菲 匆匆那年')).toEqual(candidates[1])
   })
 
   it('falls back to the first song when nothing matches', () => {
