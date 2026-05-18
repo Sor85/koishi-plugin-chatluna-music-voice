@@ -11,7 +11,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "koishi-plugin-chatluna/services/chat": ["node_modules/koishi-plugin-chatluna/lib/services/types"]
+    }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"],
   "exclude": ["lib", "node_modules"]
