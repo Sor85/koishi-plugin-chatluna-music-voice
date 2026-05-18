@@ -42,8 +42,8 @@ export interface NetEaseSongItem {
 }
 
 export interface PluginLogger {
-  debug: (...args: unknown[]) => void
-  info: (...args: unknown[]) => void
+  debug: (message: unknown, ...args: unknown[]) => void
+  info: (message: unknown, ...args: unknown[]) => void
   warn: (message: string, error?: unknown) => void
   error: (message: string, error?: unknown) => void
 }

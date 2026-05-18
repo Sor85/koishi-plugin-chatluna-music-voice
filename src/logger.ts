@@ -10,13 +10,13 @@ export function createPluginLogger(ctx: Context, config: Config): PluginLogger {
   const logger = ctx.logger('chatluna-music')
 
   return {
-    debug(...args: unknown[]) {
+    debug(message: unknown, ...args: unknown[]) {
       if (config.debug) {
-        logger.debug(args[0] as any, ...args.slice(1) as any[])
+        logger.debug(message, ...args)
       }
     },
-    info(...args: unknown[]) {
-      logger.info(args[0] as any, ...args.slice(1) as any[])
+    info(message: unknown, ...args: unknown[]) {
+      logger.info(message, ...args)
     },
     warn(message: string, error?: unknown) {
       if (error === undefined) {
