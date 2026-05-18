@@ -8,6 +8,7 @@ import { selectBestSong } from './selector'
 import { sendGenerationTip, sendSongByMode } from './sender'
 import type { Config, PluginLogger, SongData } from './types'
 
+/** 音乐播放流程的可替换依赖，便于测试和解耦。 */
 export interface PlayNeteaseMusicDependencies {
   search: typeof searchNetEase
   select: (songs: SongData[], query: string) => SongData | undefined
@@ -69,6 +70,11 @@ export async function playNeteaseMusic(
 
   try {
     await deps.sendTip(session, config.generationTip)
+  } catch (error) {
+    logger.warn('生成提示发送失败', error)
+  }
+
+  try {
     await deps.send(session, src, config)
   } catch (error) {
     logger.error('歌曲语音发送失败', error)

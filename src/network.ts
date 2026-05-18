@@ -149,7 +149,7 @@ export function parseSearchResponse(content: string) {
       })
     }
 
-    return valid.length > 0 ? valid : null
+    return valid
   } catch {
     return null
   }

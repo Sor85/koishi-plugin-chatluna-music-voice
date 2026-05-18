@@ -80,12 +80,20 @@ describe('parseSearchResponse', () => {
     }])
   })
 
-  it('returns null when all items are invalid', () => {
+  it('returns empty array when all items are invalid', () => {
     const result = parseSearchResponse(JSON.stringify({
       result: { songs: [{ id: 1 }] }
     }))
 
-    expect(result).toBeNull()
+    expect(result).toEqual([])
+  })
+
+  it('returns empty array for empty songs list', () => {
+    const result = parseSearchResponse(JSON.stringify({
+      result: { songs: [] }
+    }))
+
+    expect(result).toEqual([])
   })
 })
 
@@ -124,6 +132,14 @@ describe('searchNetEase', () => {
       albumName: '叶惠美',
       duration: 269000
     }])
+  })
+
+  it('resolves empty array when search returns empty songs', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      result: { songs: [] }
+    }))))
+
+    await expect(searchNetEase(baseConfig, '不存在的歌', 5, logger)).resolves.toEqual([])
   })
 })
 
