@@ -1,0 +1,40 @@
+{
+  "name": "koishi-plugin-chatluna-music",
+  "description": "Let ChatLuna characters search NetEase Music and send songs as voice messages.",
+  "version": "0.1.0",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": ["lib", "src"],
+  "license": "MIT",
+  "keywords": ["chatbot", "koishi", "plugin", "chatluna", "music", "voice", "netease"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "koishi": {
+    "description": {
+      "zh": "让 ChatLuna 角色自主搜索网易云音乐并发送为语音。",
+      "en": "Let ChatLuna characters search NetEase Music and send songs as voice messages."
+    },
+    "service": {
+      "required": ["chatluna"]
+    }
+  },
+  "peerDependencies": {
+    "koishi": "^4.17.3",
+    "koishi-plugin-chatluna": "*"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "koishi": "^4.17.3",
+    "koishi-plugin-chatluna": "*",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  },
+  "engines": { "node": ">=18" }
+}
