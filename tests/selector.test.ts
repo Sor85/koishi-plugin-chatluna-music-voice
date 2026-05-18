@@ -1,0 +1,31 @@
+// 选歌策略测试
+// 验证工具只基于 query 从候选列表中选择歌曲
+
+import { describe, expect, it } from 'vitest'
+
+import type { SongData } from '../src/types'
+import { selectBestSong } from '../src/selector'
+
+const songs: SongData[] = [
+  { id: 1, name: '晴天 Live', artists: '周杰伦', albumName: '演唱会', duration: 270000 },
+  { id: 2, name: '晴天', artists: '周杰伦', albumName: '叶惠美', duration: 269000 },
+  { id: 3, name: '阴天', artists: '莫文蔚', albumName: '就是莫文蔚', duration: 250000 }
+]
+
+describe('selectBestSong', () => {
+  it('prefers exact title match', () => {
+    expect(selectBestSong(songs, '晴天')).toEqual(songs[1])
+  })
+
+  it('uses artist token to improve selection', () => {
+    expect(selectBestSong(songs, '周杰伦 晴天')).toEqual(songs[1])
+  })
+
+  it('falls back to the first song when nothing matches', () => {
+    expect(selectBestSong(songs, '完全不存在')).toEqual(songs[0])
+  })
+
+  it('returns undefined for an empty list', () => {
+    expect(selectBestSong([], '晴天')).toBeUndefined()
+  })
+})
