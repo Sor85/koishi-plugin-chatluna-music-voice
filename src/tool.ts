@@ -12,6 +12,21 @@ import { DEFAULT_TOOL_NAME } from './constants'
 import { playNeteaseMusic } from './player'
 import type { Config, MusicToolInput, PluginLogger } from './types'
 
+const TOOL_REGISTRATION_DESCRIPTION =
+  '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'
+
+const TOOL_REGISTRATION_META = {
+  source: 'extension',
+  group: 'music',
+  tags: ['music', 'netease', 'voice'],
+  defaultAvailability: {
+    enabled: true,
+    main: true,
+    chatluna: true,
+    characterScope: 'all'
+  }
+}
+
 const musicToolSchema = z.object({
   query: z
     .string()
@@ -78,12 +93,14 @@ export function registerChatLunaMusicTool(
 ) {
   const toolName = config.toolName.trim() || DEFAULT_TOOL_NAME
   const dispose = ctx.chatluna.platform.registerTool(toolName, {
+    description: TOOL_REGISTRATION_DESCRIPTION,
     createTool() {
       return new ChatLunaMusicTool({ ...config, toolName }, logger)
     },
     selector() {
       return true
-    }
+    },
+    meta: TOOL_REGISTRATION_META
   })
 
   ctx.on('dispose', dispose)

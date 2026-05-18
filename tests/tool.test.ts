@@ -1,5 +1,5 @@
 // ChatLuna 工具注册测试
-// 验证工具注册、query 输入和当前 session 读取
+// 验证工具注册、元数据、query 输入和当前 session 读取
 
 import type { Context, Session } from 'koishi'
 import { describe, expect, it, vi } from 'vitest'
@@ -66,6 +66,18 @@ describe('registerChatLunaMusicTool', () => {
     expect(registerTool).toHaveBeenCalledWith(
       'music_voice',
       expect.objectContaining({
+        description: '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。',
+        meta: {
+          source: 'extension',
+          group: 'music',
+          tags: ['music', 'netease', 'voice'],
+          defaultAvailability: {
+            enabled: true,
+            main: true,
+            chatluna: true,
+            characterScope: 'all'
+          }
+        },
         createTool: expect.any(Function),
         selector: expect.any(Function)
       })
