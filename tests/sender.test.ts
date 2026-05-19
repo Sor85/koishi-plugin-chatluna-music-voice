@@ -73,4 +73,19 @@ describe('sendSongByMode', () => {
     expect(file[0].attrs.src).toBe('https://cdn.example.com/song.mp3')
     expect(file[0].attrs.title).toBe('song.mp3')
   })
+
+  it('sends NetEase music card in netease-card mode', async () => {
+    const { session, send } = createSession()
+
+    await sendSongByMode(session, '186016', {
+      ...baseConfig,
+      sendMode: 'netease-card'
+    })
+
+    expect(fetchSongBuffer).not.toHaveBeenCalled()
+    const sent = send.mock.calls[0][0] as Element
+    expect(sent.type).toBe('onebot:music')
+    expect(sent.attrs.type).toBe('163')
+    expect(sent.attrs.id).toBe('186016')
+  })
 })

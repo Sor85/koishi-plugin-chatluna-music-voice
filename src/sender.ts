@@ -1,5 +1,5 @@
 // 歌曲发送模块
-// 根据配置把歌曲直链发送为音频 URL、音频 buffer 或文件
+// 根据配置把歌曲发送为音频 URL、音频 buffer、文件或网易云卡片
 
 import { h, type Session } from 'koishi'
 
@@ -22,5 +22,8 @@ export async function sendSongByMode(session: Session, src: string, config: Conf
       await session.send(h.file(src, { title: filename }))
       return
     }
+    case 'netease-card':
+      await session.send(h('onebot:music', { type: '163', id: src }))
+      return
   }
 }

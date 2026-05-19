@@ -113,6 +113,25 @@ describe('playNeteaseMusic', () => {
     expect(singleConfig.sendMode).toBe('audio-url')
   })
 
+  it('sends NetEase card without resolving audio source in netease-card mode', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps, 'netease-card')
+    ).resolves.toBe('已发送：晴天 - 周杰伦')
+
+    expect(deps.resolveSource).not.toHaveBeenCalled()
+    expect(deps.send).toHaveBeenCalledWith(
+      session,
+      '186016',
+      { ...singleConfig, sendMode: 'netease-card' }
+    )
+  })
+
   it('returns range error when index is out of bounds', async () => {
     const deps = {
       search: vi.fn(async () => [song]),

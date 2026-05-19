@@ -3,7 +3,7 @@
 
 export type SourceMode = 'preset' | 'custom'
 
-export type SendMode = 'audio-url' | 'audio-buffer' | 'file'
+export type SendMode = 'audio-url' | 'audio-buffer' | 'file' | 'netease-card'
 
 export interface Config {
   toolName: string

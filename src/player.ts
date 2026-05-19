@@ -39,6 +39,20 @@ async function sendSelectedSong(
   deps: PlayNeteaseMusicDependencies,
   sendMode?: SendMode
 ): Promise<string> {
+  const effectiveConfig = sendMode === undefined ? config : { ...config, sendMode }
+
+  if (effectiveConfig.sendMode === 'netease-card') {
+    try {
+      await deps.send(session, String(selected.id), effectiveConfig)
+    } catch (error) {
+      logger.error('歌曲语音发送失败', error)
+      return '找到了歌曲，但语音发送失败。'
+    }
+
+    logger.info('已发送歌曲', `${selected.name} - ${selected.artists}`)
+    return `已发送：${selected.name} - ${selected.artists}`
+  }
+
   let src: string
 
   try {
@@ -49,7 +63,7 @@ async function sendSelectedSong(
   }
 
   try {
-    await deps.send(session, src, sendMode === undefined ? config : { ...config, sendMode })
+    await deps.send(session, src, effectiveConfig)
   } catch (error) {
     logger.error('歌曲语音发送失败', error)
     return '找到了歌曲，但语音发送失败。'

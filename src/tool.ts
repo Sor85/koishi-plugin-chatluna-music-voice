@@ -39,9 +39,9 @@ const musicToolSchema = z.object({
     .optional()
     .describe('Candidate song number from the previous result list, starting from 1.'),
   sendMode: z
-    .enum(['audio-buffer', 'audio-url', 'file'])
+    .enum(['audio-buffer', 'audio-url', 'file', 'netease-card'])
     .optional()
-    .describe('Optional song sending mode for this call. audio-buffer sends voice after downloading audio, audio-url sends the remote audio URL as text, and file sends the remote audio URL as a file. Omit it to use the default mode configured in Koishi.')
+    .describe('Optional song sending mode for this call. audio-buffer sends voice after downloading audio, audio-url sends the remote audio URL as text, file sends the remote audio URL as a file, and netease-card sends a NetEase Music card. Omit it to use the default mode configured in Koishi.')
 })
 
 /** 搜索并发送网易云音乐的实际执行函数签名。 */
