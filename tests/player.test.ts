@@ -1,7 +1,7 @@
 // 音乐播放主流程测试
 // 验证搜索、候选歌单、选歌、解析直链和发送的编排结果
 
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PlayNeteaseMusicDependencies } from '../src/player'
 import type { Config, PluginLogger, SongData } from '../src/types'
@@ -45,6 +45,10 @@ const anotherSong: SongData = {
 }
 
 describe('playNeteaseMusic', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('sends the only candidate directly when searchLimit is 1', async () => {
     const deps = {
       search: vi.fn(async () => [song]),
@@ -78,7 +82,7 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).not.toHaveBeenCalled()
   })
 
-  it('sends selected song by 1-based index when searchLimit > 1', async () => {
+  it('sends selected song by 1-based index as direct tool output when searchLimit > 1', async () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
       resolveSource: vi.fn(async (_cfg: Config, id: number) =>
@@ -88,10 +92,14 @@ describe('playNeteaseMusic', () => {
     } satisfies PlayNeteaseMusicDependencies
 
     await expect(playNeteaseMusic(session, config, '晴天', logger, 2, deps))
-      .resolves.toBe('已发送：晴天 Live - 周杰伦')
+      .resolves.toEqual({
+        lc_direct_tool_output: true,
+        replyEmitted: true
+      })
 
     expect(deps.resolveSource).toHaveBeenCalledWith(config, 2, logger)
     expect(deps.send).toHaveBeenCalledWith(session, 'https://cdn.example.com/live.mp3', config)
+    expect(logger.info).toHaveBeenCalledWith('已发送歌曲', '晴天 Live - 周杰伦')
   })
 
   it('uses requested send mode for current tool call without changing default config', async () => {
@@ -130,6 +138,29 @@ describe('playNeteaseMusic', () => {
       '186016',
       { ...singleConfig, sendMode: 'netease-card' }
     )
+  })
+
+  it('sends selected NetEase card as direct tool output when searchLimit > 1', async () => {
+    const deps = {
+      search: vi.fn(async () => [song, anotherSong]),
+      resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, config, '晴天', logger, 1, deps, 'netease-card')
+    ).resolves.toEqual({
+      lc_direct_tool_output: true,
+      replyEmitted: true
+    })
+
+    expect(deps.resolveSource).not.toHaveBeenCalled()
+    expect(deps.send).toHaveBeenCalledWith(
+      session,
+      '186016',
+      { ...config, sendMode: 'netease-card' }
+    )
+    expect(logger.info).toHaveBeenCalledWith('已发送歌曲', '晴天 - 周杰伦')
   })
 
   it('returns range error when index is out of bounds', async () => {
@@ -184,6 +215,20 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).not.toHaveBeenCalled()
   })
 
+  it('returns source failure text when searchLimit > 1', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => { throw new Error('source failed') }),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(playNeteaseMusic(session, config, '晴天', logger, 1, deps))
+      .resolves.toBe('找到了歌曲，但暂时无法获取播放地址。')
+
+    expect(logger.warn).toHaveBeenCalledWith('歌曲直链获取失败', expect.any(Error))
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
   it('returns send failure text when message sending fails', async () => {
     const deps = {
       search: vi.fn(async () => [song]),
@@ -193,6 +238,33 @@ describe('playNeteaseMusic', () => {
 
     await expect(playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps))
       .resolves.toBe('找到了歌曲，但语音发送失败。')
+  })
+
+  it('returns send failure text when searchLimit > 1', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
+      send: vi.fn(async () => { throw new Error('send failed') })
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(playNeteaseMusic(session, config, '晴天', logger, 1, deps))
+      .resolves.toBe('找到了歌曲，但语音发送失败。')
+
+    expect(logger.error).toHaveBeenCalledWith('歌曲语音发送失败', expect.any(Error))
+  })
+
+  it('returns NetEase card send failure text when searchLimit > 1', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
+      send: vi.fn(async () => { throw new Error('send failed') })
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(playNeteaseMusic(session, config, '晴天', logger, 1, deps, 'netease-card'))
+      .resolves.toBe('找到了歌曲，但语音发送失败。')
+
+    expect(deps.resolveSource).not.toHaveBeenCalled()
+    expect(logger.error).toHaveBeenCalledWith('歌曲语音发送失败', expect.any(Error))
   })
 
   it('returns service unavailable when search throws', async () => {

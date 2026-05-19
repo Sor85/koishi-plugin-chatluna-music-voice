@@ -5,7 +5,7 @@ import type { Session } from 'koishi'
 
 import { searchNetEase, resolveSongSource } from './network'
 import { sendSongByMode } from './sender'
-import type { Config, PluginLogger, SendMode, SongData } from './types'
+import type { Config, MusicToolResult, PluginLogger, SendMode, SongData } from './types'
 
 /** 音乐播放流程的可替换依赖，便于测试和解耦。 */
 export interface PlayNeteaseMusicDependencies {
@@ -19,6 +19,11 @@ const defaultDependencies: PlayNeteaseMusicDependencies = {
   resolveSource: resolveSongSource,
   send: sendSongByMode
 }
+
+const silentToolResult = {
+  lc_direct_tool_output: true,
+  replyEmitted: true
+} as const
 
 /** 格式化候选歌曲列表。 */
 function formatCandidateList(songs: SongData[]): string {
@@ -37,8 +42,9 @@ async function sendSelectedSong(
   selected: SongData,
   logger: PluginLogger,
   deps: PlayNeteaseMusicDependencies,
-  sendMode?: SendMode
-): Promise<string> {
+  sendMode?: SendMode,
+  silentResult = false
+): Promise<MusicToolResult> {
   const effectiveConfig = sendMode === undefined ? config : { ...config, sendMode }
 
   if (effectiveConfig.sendMode === 'netease-card') {
@@ -50,7 +56,7 @@ async function sendSelectedSong(
     }
 
     logger.info('已发送歌曲', `${selected.name} - ${selected.artists}`)
-    return `已发送：${selected.name} - ${selected.artists}`
+    return silentResult ? silentToolResult : `已发送：${selected.name} - ${selected.artists}`
   }
 
   let src: string
@@ -70,7 +76,7 @@ async function sendSelectedSong(
   }
 
   logger.info('已发送歌曲', `${selected.name} - ${selected.artists}`)
-  return `已发送：${selected.name} - ${selected.artists}`
+  return silentResult ? silentToolResult : `已发送：${selected.name} - ${selected.artists}`
 }
 
 /** 搜索并发送一首网易云音乐。 */
@@ -120,7 +126,7 @@ export async function playNeteaseMusic(
     if (index < 1 || index > songs.length) {
       return `序号无效，请选择 1-${songs.length} 之间的数字。`
     }
-    return sendSelectedSong(session, config, songs[index - 1], logger, deps, sendMode)
+    return sendSelectedSong(session, config, songs[index - 1], logger, deps, sendMode, true)
   }
 
   return sendSelectedSong(session, config, songs[0], logger, deps, sendMode)

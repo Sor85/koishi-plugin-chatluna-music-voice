@@ -21,6 +21,13 @@ export interface MusicToolInput {
   sendMode?: SendMode
 }
 
+export interface SilentToolResult {
+  readonly lc_direct_tool_output: true
+  readonly replyEmitted: true
+}
+
+export type MusicToolResult = string | SilentToolResult
+
 export interface SongData {
   id: number
   name: string

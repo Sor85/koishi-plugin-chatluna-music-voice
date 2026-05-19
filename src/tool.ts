@@ -10,7 +10,7 @@ import { z } from 'zod/v3'
 
 import { DEFAULT_TOOL_NAME } from './constants'
 import { playNeteaseMusic } from './player'
-import type { Config, MusicToolInput, PluginLogger } from './types'
+import type { Config, MusicToolInput, MusicToolResult, PluginLogger } from './types'
 
 const TOOL_REGISTRATION_DESCRIPTION =
   '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'
@@ -52,14 +52,14 @@ export type PlayMusicFunction = (
   logger: PluginLogger,
   index?: number,
   sendMode?: MusicToolInput['sendMode']
-) => Promise<string>
+) => Promise<MusicToolResult>
 
 /** ChatLuna 网易云音乐语音工具，通过 query 搜索网易云音乐并在当前聊天发送整首音频/语音。 */
 export class ChatLunaMusicTool extends StructuredTool<
   typeof musicToolSchema,
   MusicToolInput,
   MusicToolInput,
-  string
+  MusicToolResult
 > {
   name: string
   description =
