@@ -1,5 +1,5 @@
 // 歌曲发送模块
-// 根据配置把歌曲发送为音频 URL、音频 buffer、文件或网易云卡片
+// 根据配置把歌曲发送为音频 URL、音频 buffer、文件或音乐卡片
 // 模型返回链接模式由播放流程处理，不在这里发送消息
 
 import { h, type Session } from 'koishi'
@@ -28,8 +28,6 @@ export async function sendSongByMode(session: Session, src: string | MusicCardPa
       return
     }
     case 'music-card':
-      // netease-card 是旧配置兼容项，保留给已保存旧配置的用户。
-    case 'netease-card':
       try {
         await session.send(h('onebot:music', {
           type: typeof src === 'string' || src.platform === 'netease' ? '163' : 'qq',

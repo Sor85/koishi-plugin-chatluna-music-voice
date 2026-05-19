@@ -5,7 +5,7 @@ export type SourceMode = 'preset' | 'custom'
 
 export type MusicPlatform = 'netease' | 'qq'
 
-export type SendMode = 'audio-buffer' | 'audio-url-model' | 'audio-url' | 'file' | 'music-card' | 'netease-card'
+export type SendMode = 'audio-buffer' | 'audio-url-model' | 'audio-url' | 'file' | 'music-card'
 
 export interface Config {
   toolName: string

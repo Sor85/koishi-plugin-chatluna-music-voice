@@ -155,7 +155,7 @@ describe('playNeteaseMusic', () => {
     expect(singleConfig.sendMode).toBe('audio-url')
   })
 
-  it('sends NetEase card without resolving audio source in netease-card mode', async () => {
+  it('sends NetEase card without resolving audio source in music-card mode', async () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
@@ -163,14 +163,14 @@ describe('playNeteaseMusic', () => {
     } satisfies PlayNeteaseMusicDependencies
 
     await expect(
-      playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps, 'netease-card')
+      playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps, 'music-card')
     ).resolves.toBe('已发送：晴天 - 周杰伦')
 
     expect(deps.resolveSource).not.toHaveBeenCalled()
     expect(deps.send).toHaveBeenCalledWith(
       session,
       '186016',
-      { ...singleConfig, sendMode: 'netease-card' }
+      { ...singleConfig, sendMode: 'music-card' }
     )
   })
 
@@ -279,7 +279,7 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).not.toHaveBeenCalled()
   })
 
-  it('sends selected NetEase card as direct tool output when searchLimit > 1', async () => {
+  it('sends selected NetEase music card as direct tool output when searchLimit > 1', async () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
       resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
@@ -287,7 +287,7 @@ describe('playNeteaseMusic', () => {
     } satisfies PlayNeteaseMusicDependencies
 
     await expect(
-      playNeteaseMusic(session, config, '晴天', logger, 1, deps, 'netease-card')
+      playNeteaseMusic(session, config, '晴天', logger, 1, deps, 'music-card')
     ).resolves.toEqual({
       lc_direct_tool_output: true,
       replyEmitted: true
@@ -297,7 +297,7 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).toHaveBeenCalledWith(
       session,
       '186016',
-      { ...config, sendMode: 'netease-card' }
+      { ...config, sendMode: 'music-card' }
     )
     expect(logger.info).toHaveBeenCalledWith('已发送歌曲', '晴天 - 周杰伦')
   })
@@ -392,14 +392,14 @@ describe('playNeteaseMusic', () => {
     expect(logger.error).toHaveBeenCalledWith('歌曲语音发送失败', expect.any(Error))
   })
 
-  it('returns NetEase card send failure text when searchLimit > 1', async () => {
+  it('returns music card send failure text when searchLimit > 1', async () => {
     const deps = {
       search: vi.fn(async () => [song]),
       resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
       send: vi.fn(async () => { throw new Error('send failed') })
     } satisfies PlayNeteaseMusicDependencies
 
-    await expect(playNeteaseMusic(session, config, '晴天', logger, 1, deps, 'netease-card'))
+    await expect(playNeteaseMusic(session, config, '晴天', logger, 1, deps, 'music-card'))
       .resolves.toBe('找到了歌曲，但语音发送失败。')
 
     expect(deps.resolveSource).not.toHaveBeenCalled()

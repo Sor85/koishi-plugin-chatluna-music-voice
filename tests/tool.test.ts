@@ -49,13 +49,13 @@ describe('ChatLunaMusicTool', () => {
     expect(play).toHaveBeenCalledWith(session, config, '晴天', logger, 2, 'file')
   })
 
-  it('accepts netease-card as a tool send mode', () => {
+  it('rejects netease-card as a tool send mode', () => {
     const tool = new ChatLunaMusicTool(config, logger, vi.fn())
 
     expect(() => tool.schema.parse({
       query: '晴天',
       sendMode: 'netease-card'
-    })).not.toThrow()
+    })).toThrow()
   })
 
   it('accepts music-card as a tool send mode', () => {

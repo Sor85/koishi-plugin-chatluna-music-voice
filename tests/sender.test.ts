@@ -87,12 +87,12 @@ describe('sendSongByMode', () => {
     expect(file[0].attrs.title).toBe('song.mp3')
   })
 
-  it('sends NetEase music card in netease-card mode', async () => {
+  it('sends NetEase music card in music-card mode', async () => {
     const { session, send } = createSession()
 
     await sendSongByMode(session, '186016', {
       ...baseConfig,
-      sendMode: 'netease-card'
+      sendMode: 'music-card'
     })
 
     expect(fetchSongBuffer).not.toHaveBeenCalled()
@@ -100,6 +100,17 @@ describe('sendSongByMode', () => {
     expect(sent.type).toBe('onebot:music')
     expect(sent.attrs.type).toBe('163')
     expect(sent.attrs.id).toBe('186016')
+  })
+
+  it('does not send a music card for legacy netease-card mode', async () => {
+    const { session, send } = createSession()
+
+    await sendSongByMode(session, '186016', {
+      ...baseConfig,
+      sendMode: 'netease-card' as unknown as Config['sendMode']
+    })
+
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('sends QQ music card in music-card mode', async () => {

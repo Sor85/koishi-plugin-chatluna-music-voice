@@ -151,7 +151,7 @@ async function sendSelectedSong(
 ): Promise<MusicToolResult> {
   const effectiveConfig = sendMode === undefined ? config : { ...config, sendMode }
 
-  if (effectiveConfig.sendMode === 'music-card' || effectiveConfig.sendMode === 'netease-card') {
+  if (effectiveConfig.sendMode === 'music-card') {
     try {
       await deps.send(session, getCardPayload(selected), effectiveConfig)
     } catch (error) {
