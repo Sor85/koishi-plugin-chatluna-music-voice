@@ -55,6 +55,23 @@ describe('ChatLunaMusicTool', () => {
       sendMode: 'netease-card'
     })).not.toThrow()
   })
+
+  it('accepts audio-url-model as a tool send mode', () => {
+    const tool = new ChatLunaMusicTool(config, logger, vi.fn())
+
+    expect(() => tool.schema.parse({
+      query: '晴天',
+      sendMode: 'audio-url-model'
+    })).not.toThrow()
+  })
+
+  it('tells the model not to call index after audio-url-model links are returned', () => {
+    const tool = new ChatLunaMusicTool(config, logger, vi.fn())
+
+    expect(tool.description).toContain('Do not call this tool again with index')
+    expect(tool.schema.shape.index.description).toContain('Do not use index for audio-url-model')
+    expect(tool.schema.shape.sendMode.description).toContain('do not call the tool again with index')
+  })
 })
 
 describe('registerChatLunaMusicTool', () => {
@@ -114,7 +131,7 @@ describe('registerChatLunaMusicTool', () => {
     expect(registerTool).toHaveBeenCalledWith(
       'music_voice',
       expect.objectContaining({
-        description: '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'
+        description: '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
       })
     )
   })

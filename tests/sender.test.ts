@@ -1,5 +1,5 @@
 // 歌曲发送模块测试
-// 验证三种发送模式会生成对应 Koishi 消息元素
+// 验证各发送模式会生成对应 Koishi 消息元素或保持静默
 
 import { h, type Element, type Session } from 'koishi'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -43,6 +43,17 @@ describe('sendSongByMode', () => {
     const sent = send.mock.calls[0][0] as Element
     expect(String(sent)).toBe('https://cdn.example.com/song.mp3')
     expect(h.select([sent], 'audio')).toHaveLength(0)
+  })
+
+  it('does not send in audio-url-model mode', async () => {
+    const { session, send } = createSession()
+
+    await sendSongByMode(session, 'https://cdn.example.com/song.mp3', {
+      ...baseConfig,
+      sendMode: 'audio-url-model'
+    })
+
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('downloads and sends buffer in audio-buffer mode', async () => {

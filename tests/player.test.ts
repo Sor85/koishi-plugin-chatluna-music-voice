@@ -140,6 +140,88 @@ describe('playNeteaseMusic', () => {
     )
   })
 
+  it('returns remote audio URL to model without sending in audio-url-model mode', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps, 'audio-url-model')
+    ).resolves.toBe('远程音频链接：https://cdn.example.com/song.mp3')
+
+    expect(deps.resolveSource).toHaveBeenCalledWith(singleConfig, 186016, logger)
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
+  it('returns candidate list with remote audio URLs in audio-url-model mode', async () => {
+    const deps = {
+      search: vi.fn(async () => [song, anotherSong]),
+      resolveSource: vi.fn(async (_cfg: Config, id: number) =>
+        id === anotherSong.id
+          ? 'https://cdn.example.com/live.mp3'
+          : 'https://cdn.example.com/song.mp3'
+      ),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, config, '晴天', logger, undefined, deps, 'audio-url-model')
+    ).resolves.toBe(
+      '找到以下候选歌曲：\n'
+      + '1. 晴天 - 周杰伦（叶惠美）\n'
+      + '链接：https://cdn.example.com/song.mp3\n'
+      + '2. 晴天 Live - 周杰伦（演唱会）\n'
+      + '链接：https://cdn.example.com/live.mp3\n\n'
+      + '请直接从以上链接中选择，不要再次调用本工具传入 index。'
+    )
+
+    expect(deps.resolveSource).toHaveBeenCalledWith(config, 186016, logger)
+    expect(deps.resolveSource).toHaveBeenCalledWith(config, 2, logger)
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
+  it('keeps candidates when one remote audio URL fails in audio-url-model mode', async () => {
+    const deps = {
+      search: vi.fn(async () => [song, anotherSong]),
+      resolveSource: vi.fn(async (_cfg: Config, id: number) => {
+        if (id === song.id) throw new Error('source failed')
+        return 'https://cdn.example.com/live.mp3'
+      }),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, config, '晴天', logger, undefined, deps, 'audio-url-model')
+    ).resolves.toBe(
+      '找到以下候选歌曲：\n'
+      + '1. 晴天 - 周杰伦（叶惠美）\n'
+      + '链接：获取失败\n'
+      + '2. 晴天 Live - 周杰伦（演唱会）\n'
+      + '链接：https://cdn.example.com/live.mp3\n\n'
+      + '请直接从以上链接中选择，不要再次调用本工具传入 index。'
+    )
+
+    expect(logger.warn).toHaveBeenCalledWith('歌曲直链获取失败', expect.any(Error))
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
+  it('returns selected remote audio URL by index in audio-url-model mode', async () => {
+    const deps = {
+      search: vi.fn(async () => [song, anotherSong]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/live.mp3'),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, config, '晴天', logger, 2, deps, 'audio-url-model')
+    ).resolves.toBe('远程音频链接：https://cdn.example.com/live.mp3')
+
+    expect(deps.resolveSource).toHaveBeenCalledWith(config, 2, logger)
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
   it('sends selected NetEase card as direct tool output when searchLimit > 1', async () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),

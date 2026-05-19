@@ -1,5 +1,6 @@
 // 歌曲发送模块
 // 根据配置把歌曲发送为音频 URL、音频 buffer、文件或网易云卡片
+// 模型返回链接模式由播放流程处理，不在这里发送消息
 
 import { h, type Session } from 'koishi'
 
@@ -11,6 +12,8 @@ export async function sendSongByMode(session: Session, src: string, config: Conf
   switch (config.sendMode) {
     case 'audio-url':
       await session.send(h.text(src))
+      return
+    case 'audio-url-model':
       return
     case 'audio-buffer': {
       const buffer = await fetchSongBuffer(src)

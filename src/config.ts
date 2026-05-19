@@ -13,7 +13,7 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
       .default(DEFAULT_TOOL_NAME),
     toolDescription: Schema.string()
       .description('显示在 ChatLuna 工具列表中的描述')
-      .default('用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'),
+      .default('用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音；audio-url-model 模式返回链接后不要再次传 index 调用工具。'),
     searchLimit: Schema.natural()
       .min(1)
       .max(10)
@@ -39,6 +39,7 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
   Schema.object({
     sendMode: Schema.union([
       Schema.const('audio-buffer').description('下载音频后发送语音'),
+      Schema.const('audio-url-model').description('返回远程音频链接给模型'),
       Schema.const('audio-url').description('直接发送远程音频链接'),
       Schema.const('file').description('把远程音频链接作为文件发送'),
       Schema.const('netease-card').description('发送网易云音乐卡片')

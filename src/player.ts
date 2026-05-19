@@ -35,6 +35,46 @@ function formatCandidateList(songs: SongData[]): string {
   )
 }
 
+/** 格式化带直链的候选歌曲列表。 */
+async function formatCandidateListWithSources(
+  config: Config,
+  songs: SongData[],
+  logger: PluginLogger,
+  deps: PlayNeteaseMusicDependencies
+) {
+  const lines = ['找到以下候选歌曲：']
+
+  for (const [i, song] of songs.entries()) {
+    lines.push(`${i + 1}. ${song.name} - ${song.artists}（${song.albumName}）`)
+
+    try {
+      const src = await deps.resolveSource(config, song.id, logger)
+      lines.push(`链接：${src}`)
+    } catch (error) {
+      logger.warn('歌曲直链获取失败', error)
+      lines.push('链接：获取失败')
+    }
+  }
+
+  return `${lines.join('\n')}\n\n请直接从以上链接中选择，不要再次调用本工具传入 index。`
+}
+
+/** 解析直链并返回给模型，不向当前聊天发送消息。 */
+async function returnSongSourceToModel(
+  config: Config,
+  selected: SongData,
+  logger: PluginLogger,
+  deps: PlayNeteaseMusicDependencies
+) {
+  try {
+    const src = await deps.resolveSource(config, selected.id, logger)
+    return `远程音频链接：${src}`
+  } catch (error) {
+    logger.warn('歌曲直链获取失败', error)
+    return '找到了歌曲，但暂时无法获取播放地址。'
+  }
+}
+
 /** 解析直链并发送指定歌曲，返回操作结果文本。 */
 async function sendSelectedSong(
   session: Session,
@@ -99,6 +139,7 @@ export async function playNeteaseMusic(
     : typeof depsOrSendMode === 'object'
       ? depsOrSendMode
       : defaultDependencies
+  const effectiveSendMode = sendMode ?? config.sendMode
   const normalizedQuery = query.trim()
 
   if (!normalizedQuery) {
@@ -121,12 +162,22 @@ export async function playNeteaseMusic(
 
   if (config.searchLimit > 1) {
     if (index === undefined) {
+      if (effectiveSendMode === 'audio-url-model') {
+        return formatCandidateListWithSources(config, songs, logger, deps)
+      }
       return formatCandidateList(songs)
     }
     if (index < 1 || index > songs.length) {
       return `序号无效，请选择 1-${songs.length} 之间的数字。`
     }
+    if (effectiveSendMode === 'audio-url-model') {
+      return returnSongSourceToModel(config, songs[index - 1], logger, deps)
+    }
     return sendSelectedSong(session, config, songs[index - 1], logger, deps, sendMode, true)
+  }
+
+  if (effectiveSendMode === 'audio-url-model') {
+    return returnSongSourceToModel(config, songs[0], logger, deps)
   }
 
   return sendSelectedSong(session, config, songs[0], logger, deps, sendMode)

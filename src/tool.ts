@@ -13,7 +13,7 @@ import { playNeteaseMusic } from './player'
 import type { Config, MusicToolInput, MusicToolResult, PluginLogger } from './types'
 
 const TOOL_REGISTRATION_DESCRIPTION =
-  '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'
+  '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
 
 const TOOL_REGISTRATION_META = {
   source: 'extension',
@@ -37,11 +37,11 @@ const musicToolSchema = z.object({
     .int()
     .min(1)
     .optional()
-    .describe('Candidate song number from the previous result list, starting from 1.'),
+    .describe('Candidate song number from a previous result list without links, starting from 1. Do not use index for audio-url-model results because those results already contain usable links.'),
   sendMode: z
-    .enum(['audio-buffer', 'audio-url', 'file', 'netease-card'])
+    .enum(['audio-buffer', 'audio-url-model', 'audio-url', 'file', 'netease-card'])
     .optional()
-    .describe('Optional song sending mode for this call. audio-buffer sends voice after downloading audio, audio-url sends the remote audio URL as text, file sends the remote audio URL as a file, and netease-card sends a NetEase Music card. Omit it to use the default mode configured in Koishi.')
+    .describe('Optional song sending mode for this call. audio-buffer sends voice after downloading audio, audio-url-model returns remote audio URLs to the model; after those links are returned, do not call the tool again with index. audio-url sends the remote audio URL as text, file sends the remote audio URL as a file, and netease-card sends a NetEase Music card. Omit it to use the default mode configured in Koishi.')
 })
 
 /** 搜索并发送网易云音乐的实际执行函数签名。 */
@@ -63,7 +63,7 @@ export class ChatLunaMusicTool extends StructuredTool<
 > {
   name: string
   description =
-    'Search NetEase Music with a query. If the tool returns a numbered candidate list, call it again with the same query and the chosen index to send that full song as audio or voice in the current chat. Input is query and optional index.'
+    'Search NetEase Music with a query. For normal sending modes, if the tool returns a numbered candidate list without links, call it again with the same query and the chosen index to send that full song as audio or voice in the current chat. In audio-url-model mode, candidate lists include remote audio URLs for the model to choose directly. Do not call this tool again with index after audio-url-model links are returned. Input is query and optional index.'
   schema = musicToolSchema
 
   constructor(
