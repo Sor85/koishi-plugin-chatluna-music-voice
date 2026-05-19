@@ -10,6 +10,8 @@ import {
 } from './constants'
 import type { Config, NetEaseSearchResponse, PluginLogger, SongData } from './types'
 
+const SEARCH_PROXY_URL = 'https://web-proxy.apifox.cn/api/v1/request'
+
 interface RequestCandidate<T> {
   label: string
   run: (signal: AbortSignal) => Promise<T>
@@ -34,6 +36,25 @@ function createAbortTimeout(controller: AbortController, timeoutMs: number) {
 
 async function requestText(targetUrl: string, signal: AbortSignal) {
   const response = await fetch(targetUrl, { method: 'GET', signal })
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+
+  return await response.text()
+}
+
+async function requestTextByProxy(targetUrl: string, signal: AbortSignal, timeoutMs: number) {
+  const response = await fetch(SEARCH_PROXY_URL, {
+    method: 'POST',
+    signal,
+    headers: {
+      'api-u': targetUrl,
+      'api-o0': `method=GET, timings=true, timeout=${timeoutMs}`,
+      'Content-Type': 'application/json'
+    },
+    body: '{}'
+  })
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
@@ -239,7 +260,10 @@ export async function searchNetEase(
   const searchApiUrl = `http://music.163.com/api/search/get/web?csrf_token=hlpretag=&hlposttag=&s=${encodeURIComponent(keyword)}&type=1&offset=0&total=true&limit=${limit}`
 
   return await raceRequests(
-    [{ label: '网易云搜索', run: (signal) => requestText(searchApiUrl, signal) }],
+    [
+      { label: '网易云搜索直连', run: (signal) => requestText(searchApiUrl, signal) },
+      { label: '网易云搜索代理', run: (signal) => requestTextByProxy(searchApiUrl, signal, SEARCH_TIMEOUT_MS) }
+    ],
     SEARCH_TIMEOUT_MS,
     parseSearchResponse,
     '网易云搜索',

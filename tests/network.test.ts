@@ -141,6 +141,36 @@ describe('searchNetEase', () => {
 
     await expect(searchNetEase(baseConfig, '不存在的歌', 5, logger)).resolves.toEqual([])
   })
+
+  it('falls back to proxy when direct search returns unusable content', async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes('web-proxy.apifox.cn')) {
+        return new Response(JSON.stringify({
+          result: {
+            songs: [{
+              id: 1,
+              name: '字母歌',
+              artists: [{ name: '贝乐虎儿歌' }],
+              album: { name: '贝乐虎儿歌' },
+              duration: 104565
+            }]
+          }
+        }))
+      }
+
+      return new Response('not json')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(searchNetEase(baseConfig, '字母歌', 5, logger)).resolves.toEqual([{
+      id: 1,
+      name: '字母歌',
+      artists: '贝乐虎儿歌',
+      albumName: '贝乐虎儿歌',
+      duration: 104565
+    }])
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('web-proxy.apifox.cn'))).toBe(true)
+  })
 })
 
 describe('resolveSongSource', () => {
