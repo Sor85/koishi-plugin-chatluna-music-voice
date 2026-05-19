@@ -104,8 +104,9 @@ export function registerChatLunaMusicTool(
   logger: PluginLogger
 ) {
   const toolName = config.toolName.trim() || DEFAULT_TOOL_NAME
+  const toolDescription = config.toolDescription.trim() || TOOL_REGISTRATION_DESCRIPTION
   const dispose = ctx.chatluna.platform.registerTool(toolName, {
-    description: TOOL_REGISTRATION_DESCRIPTION,
+    description: toolDescription,
     createTool() {
       return new ChatLunaMusicTool({ ...config, toolName }, logger)
     },

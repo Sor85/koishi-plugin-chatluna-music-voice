@@ -16,6 +16,7 @@ const logger: PluginLogger = {
 
 const config: Config = {
   toolName: 'music_voice',
+  toolDescription: '自定义音乐工具描述。',
   searchLimit: 5,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',

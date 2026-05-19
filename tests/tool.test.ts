@@ -9,6 +9,7 @@ import { ChatLunaMusicTool, registerChatLunaMusicTool } from '../src/tool'
 
 const config: Config = {
   toolName: 'music_voice',
+  toolDescription: '自定义音乐工具描述。',
   searchLimit: 5,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
@@ -65,7 +66,7 @@ describe('registerChatLunaMusicTool', () => {
     expect(registerTool).toHaveBeenCalledWith(
       'music_voice',
       expect.objectContaining({
-        description: '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。',
+        description: '自定义音乐工具描述。',
         meta: {
           source: 'extension',
           group: 'music',
@@ -82,5 +83,30 @@ describe('registerChatLunaMusicTool', () => {
       })
     )
     expect(on).toHaveBeenCalledWith('dispose', dispose)
+  })
+
+  it('falls back to default description when configured description is blank', () => {
+    const dispose = vi.fn()
+    const registerTool = vi.fn(() => dispose)
+    const on = vi.fn()
+    const ctx = {
+      chatluna: {
+        platform: { registerTool }
+      },
+      on
+    } as unknown as Context
+    const blankDescriptionConfig = {
+      ...config,
+      toolDescription: '   '
+    }
+
+    registerChatLunaMusicTool(ctx, blankDescriptionConfig, logger)
+
+    expect(registerTool).toHaveBeenCalledWith(
+      'music_voice',
+      expect.objectContaining({
+        description: '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'
+      })
+    )
   })
 })

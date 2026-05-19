@@ -11,6 +11,9 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
     toolName: Schema.string()
       .description('注册到 ChatLuna 的工具名称')
       .default(DEFAULT_TOOL_NAME),
+    toolDescription: Schema.string()
+      .description('显示在 ChatLuna 工具列表中的描述')
+      .default('用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音。'),
     searchLimit: Schema.natural()
       .min(1)
       .max(10)

@@ -7,6 +7,7 @@ export type SendMode = 'audio-url' | 'audio-buffer' | 'file'
 
 export interface Config {
   toolName: string
+  toolDescription: string
   searchLimit: number
   sourceMode: SourceMode
   customMetingApi: string
