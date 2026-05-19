@@ -7,8 +7,11 @@ import type { Config, PluginLogger } from '../src/types'
 import {
   fetchSongBuffer,
   parseMetingUrl,
+  parseQQMusicSearchResponse,
   parseSearchResponse,
   resolveSongSource,
+  searchMusic,
+  searchQQMusic,
   searchNetEase
 } from '../src/network'
 
@@ -23,6 +26,8 @@ const baseConfig: Config = {
   toolName: 'music_voice',
   toolDescription: '自定义音乐工具描述。',
   searchLimit: 5,
+  enableNetEaseSearch: true,
+  enableQQMusicSearch: false,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
@@ -94,6 +99,42 @@ describe('parseSearchResponse', () => {
     }))
 
     expect(result).toEqual([])
+  })
+})
+
+describe('parseQQMusicSearchResponse', () => {
+  it('converts QQ Music songs to SongData', () => {
+    const result = parseQQMusicSearchResponse(JSON.stringify({
+      code: 0,
+      data: {
+        song: {
+          list: [{
+            songid: 107192078,
+            songmid: '003OUlho2HcRHC',
+            media_mid: '003gbY6c0g1L4Q',
+            songname: '告白气球',
+            singer: [{ name: '周杰伦' }],
+            albumname: '周杰伦的床边故事',
+            interval: 215
+          }]
+        }
+      }
+    }))
+
+    expect(result).toEqual([{
+      platform: 'qq',
+      id: 107192078,
+      sourceId: '003OUlho2HcRHC',
+      cardId: '107192078',
+      name: '告白气球',
+      artists: '周杰伦',
+      albumName: '周杰伦的床边故事',
+      duration: 215000
+    }])
+  })
+
+  it('returns null for invalid QQ Music JSON', () => {
+    expect(parseQQMusicSearchResponse('not json')).toBeNull()
   })
 })
 
@@ -173,6 +214,100 @@ describe('searchNetEase', () => {
   })
 })
 
+describe('searchQQMusic', () => {
+  it('calls QQ Music search API and returns songs', async () => {
+    const fetchMock = vi.fn(async (_url: string | URL | Request) => new Response(JSON.stringify({
+      code: 0,
+      data: {
+        song: {
+          list: [{
+            songid: 107192078,
+            songmid: '003OUlho2HcRHC',
+            songname: '告白气球',
+            singer: [{ name: '周杰伦' }],
+            albumname: '周杰伦的床边故事',
+            interval: 215
+          }]
+        }
+      }
+    })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(searchQQMusic(baseConfig, '告白气球', 5, logger)).resolves.toEqual([{
+      platform: 'qq',
+      id: 107192078,
+      sourceId: '003OUlho2HcRHC',
+      cardId: '107192078',
+      name: '告白气球',
+      artists: '周杰伦',
+      albumName: '周杰伦的床边故事',
+      duration: 215000
+    }])
+    expect(String(fetchMock.mock.calls[0][0])).toContain('n=5')
+  })
+})
+
+describe('searchMusic', () => {
+  it('searches every enabled platform with the per-platform limit', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL | Request) => {
+      const href = String(url)
+
+      if (href.includes('c.y.qq.com')) {
+        return new Response(JSON.stringify({
+          code: 0,
+          data: {
+            song: {
+              list: [{
+                songid: 107192078,
+                songmid: '003OUlho2HcRHC',
+                songname: '告白气球',
+                singer: [{ name: '周杰伦' }],
+                albumname: '周杰伦的床边故事',
+                interval: 215
+              }]
+            }
+          }
+        }))
+      }
+
+      return new Response(JSON.stringify({
+        result: {
+          songs: [{
+            id: 186016,
+            name: '晴天',
+            artists: [{ name: '周杰伦' }],
+            album: { name: '叶惠美' },
+            duration: 269000
+          }]
+        }
+      }))
+    }))
+
+    await expect(searchMusic({
+      ...baseConfig,
+      enableQQMusicSearch: true
+    }, '周杰伦', 5, logger)).resolves.toEqual([
+      {
+        id: 186016,
+        name: '晴天',
+        artists: '周杰伦',
+        albumName: '叶惠美',
+        duration: 269000
+      },
+      {
+        platform: 'qq',
+        id: 107192078,
+        sourceId: '003OUlho2HcRHC',
+        cardId: '107192078',
+        name: '告白气球',
+        artists: '周杰伦',
+        albumName: '周杰伦的床边故事',
+        duration: 215000
+      }
+    ])
+  })
+})
+
 describe('resolveSongSource', () => {
   it('uses custom Meting API when sourceMode is custom', async () => {
     const fetchMock = vi.fn(async () => new Response('{"url":"https://cdn.example.com/song.mp3"}'))
@@ -212,6 +347,31 @@ describe('resolveSongSource', () => {
       sourceMode: 'custom',
       customMetingApi: 'https://music.example.com/meting'
     }, 123, logger)).resolves.toBe('https://music.example.com/meting?type=url&id=123')
+  })
+
+  it('adds Tencent server parameter when resolving a QQ Music song', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"url":"https://cdn.example.com/qq.m4a"}'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(resolveSongSource({
+      ...baseConfig,
+      sourceMode: 'custom',
+      customMetingApi: 'https://music.example.com/meting'
+    }, {
+      platform: 'qq',
+      id: 107192078,
+      sourceId: '003OUlho2HcRHC',
+      cardId: '107192078',
+      name: '告白气球',
+      artists: '周杰伦',
+      albumName: '周杰伦的床边故事',
+      duration: 215000
+    }, logger)).resolves.toBe('https://cdn.example.com/qq.m4a')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://music.example.com/meting?type=url&id=003OUlho2HcRHC&server=tencent',
+      expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) })
+    )
   })
 })
 

@@ -16,6 +16,8 @@ const baseConfig: Config = {
   toolName: 'music_voice',
   toolDescription: '自定义音乐工具描述。',
   searchLimit: 5,
+  enableNetEaseSearch: true,
+  enableQQMusicSearch: false,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
@@ -98,5 +100,44 @@ describe('sendSongByMode', () => {
     expect(sent.type).toBe('onebot:music')
     expect(sent.attrs.type).toBe('163')
     expect(sent.attrs.id).toBe('186016')
+  })
+
+  it('sends QQ music card in music-card mode', async () => {
+    const { session, send } = createSession()
+
+    await sendSongByMode(session, {
+      platform: 'qq',
+      id: '107192078',
+      url: 'https://y.qq.com/n/ryqq/songDetail/003OUlho2HcRHC'
+    }, {
+      ...baseConfig,
+      sendMode: 'music-card'
+    })
+
+    expect(fetchSongBuffer).not.toHaveBeenCalled()
+    const sent = send.mock.calls[0][0] as Element
+    expect(sent.type).toBe('onebot:music')
+    expect(sent.attrs.type).toBe('qq')
+    expect(sent.attrs.id).toBe('107192078')
+  })
+
+  it('falls back to a QQ Music link when QQ music card sending fails', async () => {
+    const send = vi.fn<SendFn>()
+      .mockRejectedValueOnce(new Error('retcode 1200'))
+      .mockResolvedValueOnce(['message-id'])
+    const session = { send } as Pick<Session, 'send'> as Session
+
+    await sendSongByMode(session, {
+      platform: 'qq',
+      id: '494220528',
+      url: 'https://y.qq.com/n/ryqq/songDetail/003m6lvL23QAIP'
+    }, {
+      ...baseConfig,
+      sendMode: 'music-card'
+    })
+
+    expect(send).toHaveBeenCalledTimes(2)
+    const fallback = send.mock.calls[1][0] as Element
+    expect(String(fallback)).toBe('https://y.qq.com/n/ryqq/songDetail/003m6lvL23QAIP')
   })
 })

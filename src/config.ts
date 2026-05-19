@@ -4,22 +4,27 @@
 import { Schema } from 'koishi'
 
 import { DEFAULT_TOOL_NAME } from './constants'
-import type { Config as PluginConfig } from './types'
 
-export const Config: Schema<PluginConfig> = Schema.intersect([
+export const Config = Schema.intersect([
   Schema.object({
     toolName: Schema.string()
       .description('注册到 ChatLuna 的工具名称')
       .default(DEFAULT_TOOL_NAME),
     toolDescription: Schema.string()
       .description('显示在 ChatLuna 工具列表中的描述')
-      .default('用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音；audio-url-model 模式返回链接后不要再次传 index 调用工具。'),
+      .default('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；除非用户明确要求切换发送方式，否则不要传 sendMode；audio-url-model 模式返回链接后不要再次传 index 调用工具。'),
     searchLimit: Schema.natural()
       .min(1)
       .max(10)
       .step(1)
-      .description('每次搜索返回的候选歌曲数量')
-      .default(5)
+      .description('每个平台每次搜索返回的候选歌曲数量')
+      .default(5),
+    enableNetEaseSearch: Schema.boolean()
+      .description('启用网易云音乐搜索')
+      .default(true),
+    enableQQMusicSearch: Schema.boolean()
+      .description('启用 QQ 音乐搜索（QQ 音乐接口和卡片发送并不稳定，可能因歌曲或平台限制失败）')
+      .default(false)
   }).description('基础设置'),
 
   Schema.object({
@@ -42,7 +47,7 @@ export const Config: Schema<PluginConfig> = Schema.intersect([
       Schema.const('audio-url-model').description('返回远程音频链接给模型'),
       Schema.const('audio-url').description('直接发送远程音频链接'),
       Schema.const('file').description('把远程音频链接作为文件发送'),
-      Schema.const('netease-card').description('发送网易云音乐卡片')
+      Schema.const('music-card').description('按歌曲来源发送音乐卡片')
     ])
       .role('radio')
       .description('默认歌曲发送方式，AI 调用工具时可临时选择其他发送方式')

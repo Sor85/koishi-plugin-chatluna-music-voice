@@ -11,6 +11,8 @@ const config: Config = {
   toolName: 'music_voice',
   toolDescription: '自定义音乐工具描述。',
   searchLimit: 5,
+  enableNetEaseSearch: true,
+  enableQQMusicSearch: false,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
@@ -56,6 +58,15 @@ describe('ChatLunaMusicTool', () => {
     })).not.toThrow()
   })
 
+  it('accepts music-card as a tool send mode', () => {
+    const tool = new ChatLunaMusicTool(config, logger, vi.fn())
+
+    expect(() => tool.schema.parse({
+      query: '告白气球',
+      sendMode: 'music-card'
+    })).not.toThrow()
+  })
+
   it('accepts audio-url-model as a tool send mode', () => {
     const tool = new ChatLunaMusicTool(config, logger, vi.fn())
 
@@ -71,6 +82,13 @@ describe('ChatLunaMusicTool', () => {
     expect(tool.description).toContain('Do not call this tool again with index')
     expect(tool.schema.shape.index.description).toContain('Do not use index for audio-url-model')
     expect(tool.schema.shape.sendMode.description).toContain('do not call the tool again with index')
+  })
+
+  it('tells the model to omit sendMode unless the user explicitly asks', () => {
+    const tool = new ChatLunaMusicTool(config, logger, vi.fn())
+
+    expect(tool.description).toContain('Do not set sendMode unless the user explicitly asks')
+    expect(tool.schema.shape.sendMode.description).toContain('Do not set sendMode unless the user explicitly asks')
   })
 })
 
@@ -96,7 +114,7 @@ describe('registerChatLunaMusicTool', () => {
         meta: {
           source: 'extension',
           group: 'music',
-          tags: ['music', 'netease', 'voice'],
+          tags: ['music', 'netease', 'qqmusic', 'voice'],
           defaultAvailability: {
             enabled: true,
             main: true,
@@ -131,7 +149,7 @@ describe('registerChatLunaMusicTool', () => {
     expect(registerTool).toHaveBeenCalledWith(
       'music_voice',
       expect.objectContaining({
-        description: '用于搜索网易云音乐并在当前聊天中发送整首歌曲音频或语音；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
+        description: '用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；除非用户明确要求切换发送方式，否则不要传 sendMode；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
       })
     )
   })

@@ -3,12 +3,16 @@
 
 export type SourceMode = 'preset' | 'custom'
 
-export type SendMode = 'audio-buffer' | 'audio-url-model' | 'audio-url' | 'file' | 'netease-card'
+export type MusicPlatform = 'netease' | 'qq'
+
+export type SendMode = 'audio-buffer' | 'audio-url-model' | 'audio-url' | 'file' | 'music-card' | 'netease-card'
 
 export interface Config {
   toolName: string
   toolDescription: string
   searchLimit: number
+  enableNetEaseSearch: boolean
+  enableQQMusicSearch: boolean
   sourceMode: SourceMode
   customMetingApi: string
   sendMode: SendMode
@@ -29,11 +33,20 @@ export interface SilentToolResult {
 export type MusicToolResult = string | SilentToolResult
 
 export interface SongData {
+  platform?: MusicPlatform
   id: number
+  sourceId?: string
+  cardId?: string
   name: string
   artists: string
   albumName: string
   duration: number
+}
+
+export interface MusicCardPayload {
+  platform: MusicPlatform
+  id: string
+  url?: string
 }
 
 export interface NetEaseSearchResponse {
@@ -48,6 +61,24 @@ export interface NetEaseSongItem {
   artists: Array<{ name: string }>
   album: { name: string }
   duration: number
+}
+
+export interface QQMusicSearchResponse {
+  data?: {
+    song?: {
+      list?: QQMusicSongItem[]
+    }
+  }
+}
+
+export interface QQMusicSongItem {
+  songid: number
+  songmid?: string
+  media_mid?: string
+  songname: string
+  singer: Array<{ name: string }>
+  albumname?: string
+  interval: number
 }
 
 export interface PluginLogger {

@@ -8,7 +8,14 @@ import {
   SEARCH_TIMEOUT_MS,
   SOURCE_TIMEOUT_MS
 } from './constants'
-import type { Config, NetEaseSearchResponse, PluginLogger, SongData } from './types'
+import type {
+  Config,
+  MusicPlatform,
+  NetEaseSearchResponse,
+  PluginLogger,
+  QQMusicSearchResponse,
+  SongData
+} from './types'
 
 const SEARCH_PROXY_URL = 'https://web-proxy.apifox.cn/api/v1/request'
 
@@ -36,6 +43,23 @@ function createAbortTimeout(controller: AbortController, timeoutMs: number) {
 
 async function requestText(targetUrl: string, signal: AbortSignal) {
   const response = await fetch(targetUrl, { method: 'GET', signal })
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+
+  return await response.text()
+}
+
+async function requestQQMusicText(targetUrl: string, signal: AbortSignal) {
+  const response = await fetch(targetUrl, {
+    method: 'GET',
+    signal,
+    headers: {
+      Referer: 'https://y.qq.com/',
+      'User-Agent': 'Mozilla/5.0'
+    }
+  })
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
@@ -203,6 +227,51 @@ export function parseSearchResponse(content: string) {
   }
 }
 
+/** 解析 QQ 音乐搜索响应为内部歌曲列表，跳过字段不完整的条目。 */
+export function parseQQMusicSearchResponse(content: string) {
+  try {
+    const parsed = JSON.parse(content) as QQMusicSearchResponse
+    const songs = parsed.data?.song?.list
+
+    if (!Array.isArray(songs)) {
+      return null
+    }
+
+    const valid: SongData[] = []
+
+    for (const song of songs) {
+      if (typeof song.songid !== 'number') continue
+      if (typeof song.songname !== 'string') continue
+      if (!Array.isArray(song.singer)) continue
+      if (typeof song.interval !== 'number') continue
+
+      const sourceId = typeof song.songmid === 'string' && song.songmid
+        ? song.songmid
+        : typeof song.media_mid === 'string' && song.media_mid
+          ? song.media_mid
+          : undefined
+
+      valid.push({
+        platform: 'qq',
+        id: song.songid,
+        sourceId,
+        cardId: String(song.songid),
+        name: song.songname,
+        artists: song.singer
+          .filter((artist) => typeof artist.name === 'string')
+          .map((artist) => artist.name)
+          .join('/'),
+        albumName: typeof song.albumname === 'string' ? song.albumname : '',
+        duration: song.interval * 1000
+      })
+    }
+
+    return valid
+  } catch {
+    return null
+  }
+}
+
 /** 从 Meting API 响应中解析 HTTP 音频 URL。 */
 export function parseMetingUrl(content: string) {
   const trimmed = content.trim()
@@ -241,11 +310,14 @@ export function parseMetingUrl(content: string) {
   return null
 }
 
-/** 构造 Meting API 请求 URL，安全处理 query 和 hash。 */
-function buildMetingUrl(baseUrl: string, songId: number) {
+/** 构造 Meting API 请求 URL，安全处理 query、hash 和平台参数。 */
+function buildMetingUrl(baseUrl: string, songId: number | string, platform: MusicPlatform = 'netease') {
   const url = new URL(baseUrl)
   url.searchParams.set('type', 'url')
   url.searchParams.set('id', String(songId))
+  if (platform === 'qq') {
+    url.searchParams.set('server', 'tencent')
+  }
   url.hash = ''
   return url.toString()
 }
@@ -271,14 +343,61 @@ export async function searchNetEase(
   )
 }
 
+/** 搜索 QQ 音乐歌曲。 */
+export async function searchQQMusic(
+  _config: Config,
+  keyword: string,
+  limit: number,
+  logger: PluginLogger
+) {
+  const searchApiUrl = `https://c.y.qq.com/soso/fcgi-bin/client_search_cp?format=json&p=1&n=${limit}&w=${encodeURIComponent(keyword)}`
+
+  return await raceRequests(
+    [
+      { label: 'QQ音乐搜索直连', run: (signal) => requestQQMusicText(searchApiUrl, signal) },
+      { label: 'QQ音乐搜索代理', run: (signal) => requestTextByProxy(searchApiUrl, signal, SEARCH_TIMEOUT_MS) }
+    ],
+    SEARCH_TIMEOUT_MS,
+    parseQQMusicSearchResponse,
+    'QQ音乐搜索',
+    logger
+  )
+}
+
+/** 按配置搜索所有启用的音乐平台。 */
+export async function searchMusic(
+  config: Config,
+  keyword: string,
+  limit: number,
+  logger: PluginLogger
+) {
+  const tasks: Array<Promise<SongData[]>> = []
+
+  if (config.enableNetEaseSearch !== false) {
+    tasks.push(searchNetEase(config, keyword, limit, logger))
+  }
+
+  if (config.enableQQMusicSearch) {
+    tasks.push(searchQQMusic(config, keyword, limit, logger))
+  }
+
+  if (tasks.length < 1) {
+    return []
+  }
+
+  return (await Promise.all(tasks)).flat()
+}
+
 /** 通过 Meting API 解析歌曲直链。 */
-export async function resolveSongSource(config: Config, songId: number, logger: PluginLogger) {
+export async function resolveSongSource(config: Config, song: number | SongData, logger: PluginLogger) {
   const apis = config.sourceMode === 'custom'
     ? [config.customMetingApi]
     : PRESET_METING_APIS
+  const platform = typeof song === 'number' ? 'netease' : song.platform ?? 'netease'
+  const songId = typeof song === 'number' ? song : song.sourceId ?? song.id
 
   const candidates = apis.map<RequestCandidate<string>>((api) => {
-    const targetUrl = buildMetingUrl(api, songId)
+    const targetUrl = buildMetingUrl(api, songId, platform)
     return {
       label: new URL(api).host,
       run: (signal) => requestSource(targetUrl, signal)

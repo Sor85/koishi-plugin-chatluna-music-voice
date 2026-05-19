@@ -5,28 +5,44 @@
 import { h, type Session } from 'koishi'
 
 import { fetchSongBuffer } from './network'
-import type { Config } from './types'
+import type { Config, MusicCardPayload } from './types'
 
 /** 按配置发送歌曲。 */
-export async function sendSongByMode(session: Session, src: string, config: Config) {
+export async function sendSongByMode(session: Session, src: string | MusicCardPayload, config: Config) {
+  const source = typeof src === 'string' ? src : src.id
+
   switch (config.sendMode) {
     case 'audio-url':
-      await session.send(h.text(src))
+      await session.send(h.text(source))
       return
     case 'audio-url-model':
       return
     case 'audio-buffer': {
-      const buffer = await fetchSongBuffer(src)
+      const buffer = await fetchSongBuffer(source)
       await session.send(h.audio(buffer, 'audio/mpeg'))
       return
     }
     case 'file': {
-      const filename = new URL(src).pathname.split('/').pop() || 'song.mp3'
-      await session.send(h.file(src, { title: filename }))
+      const filename = new URL(source).pathname.split('/').pop() || 'song.mp3'
+      await session.send(h.file(source, { title: filename }))
       return
     }
+    case 'music-card':
+      // netease-card 是旧配置兼容项，保留给已保存旧配置的用户。
     case 'netease-card':
-      await session.send(h('onebot:music', { type: '163', id: src }))
+      try {
+        await session.send(h('onebot:music', {
+          type: typeof src === 'string' || src.platform === 'netease' ? '163' : 'qq',
+          id: source
+        }))
+      } catch (error) {
+        if (typeof src !== 'string' && src.platform === 'qq' && src.url) {
+          await session.send(h.text(src.url))
+          return
+        }
+
+        throw error
+      }
       return
   }
 }

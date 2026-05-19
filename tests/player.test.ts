@@ -18,6 +18,8 @@ const config: Config = {
   toolName: 'music_voice',
   toolDescription: '自定义音乐工具描述。',
   searchLimit: 5,
+  enableNetEaseSearch: true,
+  enableQQMusicSearch: false,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
@@ -42,6 +44,17 @@ const anotherSong: SongData = {
   artists: '周杰伦',
   albumName: '演唱会',
   duration: 300000
+}
+
+const qqSong: SongData = {
+  platform: 'qq',
+  id: 107192078,
+  sourceId: '003OUlho2HcRHC',
+  cardId: '107192078',
+  name: '告白气球',
+  artists: '周杰伦',
+  albumName: '周杰伦的床边故事',
+  duration: 215000
 }
 
 describe('playNeteaseMusic', () => {
@@ -82,10 +95,31 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).not.toHaveBeenCalled()
   })
 
+  it('returns grouped candidate list for mixed NetEase and QQ Music results', async () => {
+    const deps = {
+      search: vi.fn(async () => [song, qqSong]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(playNeteaseMusic(session, {
+      ...config,
+      enableQQMusicSearch: true
+    }, '周杰伦', logger, undefined, deps)).resolves.toBe(
+      '网易云音乐搜索结果：\n'
+      + '1. 晴天 - 周杰伦（叶惠美）\n\n'
+      + 'QQ音乐搜索结果：\n'
+      + '2. 告白气球 - 周杰伦（周杰伦的床边故事）\n\n'
+      + '请根据用户想听的歌曲，再次调用本工具并传入对应 index。'
+    )
+    expect(deps.resolveSource).not.toHaveBeenCalled()
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
   it('sends selected song by 1-based index as direct tool output when searchLimit > 1', async () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
-      resolveSource: vi.fn(async (_cfg: Config, id: number) =>
+      resolveSource: vi.fn(async (_cfg: Config, id: number | SongData) =>
         id === anotherSong.id ? 'https://cdn.example.com/live.mp3' : ''
       ),
       send: vi.fn(async () => undefined)
@@ -140,6 +174,29 @@ describe('playNeteaseMusic', () => {
     )
   })
 
+  it('sends QQ Music card in music-card mode without resolving audio source', async () => {
+    const deps = {
+      search: vi.fn(async () => [qqSong]),
+      resolveSource: vi.fn(async () => { throw new Error('should not resolve source') }),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, singleConfig, '告白气球', logger, undefined, deps, 'music-card')
+    ).resolves.toBe('已发送：告白气球 - 周杰伦')
+
+    expect(deps.resolveSource).not.toHaveBeenCalled()
+    expect(deps.send).toHaveBeenCalledWith(
+      session,
+      {
+        platform: 'qq',
+        id: '107192078',
+        url: 'https://y.qq.com/n/ryqq/songDetail/003OUlho2HcRHC'
+      },
+      { ...singleConfig, sendMode: 'music-card' }
+    )
+  })
+
   it('returns remote audio URL to model without sending in audio-url-model mode', async () => {
     const deps = {
       search: vi.fn(async () => [song]),
@@ -158,7 +215,7 @@ describe('playNeteaseMusic', () => {
   it('returns candidate list with remote audio URLs in audio-url-model mode', async () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
-      resolveSource: vi.fn(async (_cfg: Config, id: number) =>
+      resolveSource: vi.fn(async (_cfg: Config, id: number | SongData) =>
         id === anotherSong.id
           ? 'https://cdn.example.com/live.mp3'
           : 'https://cdn.example.com/song.mp3'
@@ -185,7 +242,7 @@ describe('playNeteaseMusic', () => {
   it('keeps candidates when one remote audio URL fails in audio-url-model mode', async () => {
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
-      resolveSource: vi.fn(async (_cfg: Config, id: number) => {
+      resolveSource: vi.fn(async (_cfg: Config, id: number | SongData) => {
         if (id === song.id) throw new Error('source failed')
         return 'https://cdn.example.com/live.mp3'
       }),
