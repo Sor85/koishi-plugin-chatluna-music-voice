@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-chatluna-music-voice",
   "description": "为 ChatLuna 提供搜索网易云音乐并以语音消息的形式发送歌曲的工具。",
-  "version": "0.0.6",
+  "version": "0.0.9",
   "main": "lib/src/index.js",
   "typings": "lib/src/index.d.ts",
   "files": ["lib", "src"],
