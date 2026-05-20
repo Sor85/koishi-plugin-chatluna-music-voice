@@ -9,7 +9,8 @@ import type { Context, Session } from 'koishi'
 import { z } from 'zod/v3'
 
 import { DEFAULT_TOOL_NAME } from './constants'
-import { playNeteaseMusic } from './player'
+import { createPlayNeteaseMusicDependencies, playNeteaseMusic } from './player'
+import type { AudioUrlRedirector } from './short-link'
 import type { Config, MusicToolInput, MusicToolResult, PluginLogger, SendMode } from './types'
 
 const TOOL_REGISTRATION_DESCRIPTION =
@@ -153,14 +154,20 @@ export class ChatLunaMusicTool extends StructuredTool<
 export function registerChatLunaMusicTool(
   ctx: Context,
   config: Config,
-  logger: PluginLogger
+  logger: PluginLogger,
+  audioUrlRedirector?: AudioUrlRedirector
 ) {
   const toolName = config.toolName.trim() || DEFAULT_TOOL_NAME
   const toolDescription = getRegistrationDescription(config)
+  const dependencies = createPlayNeteaseMusicDependencies(
+    audioUrlRedirector ? (targetUrl) => audioUrlRedirector.shorten(targetUrl) : undefined
+  )
+  const playMusic: PlayMusicFunction = (session, pluginConfig, query, pluginLogger, index, sendMode) =>
+    playNeteaseMusic(session, pluginConfig, query, pluginLogger, index, dependencies, sendMode)
   const dispose = ctx.chatluna.platform.registerTool(toolName, {
     description: toolDescription,
     createTool() {
-      return new ChatLunaMusicTool({ ...config, toolName }, logger)
+      return new ChatLunaMusicTool({ ...config, toolName }, logger, playMusic)
     },
     selector() {
       return true

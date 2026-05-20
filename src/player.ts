@@ -12,12 +12,22 @@ export interface PlayNeteaseMusicDependencies {
   search: typeof searchMusic
   resolveSource: typeof resolveSongSource
   send: typeof sendSongByMode
+  shortenAudioUrl?: (targetUrl: string) => string | null | Promise<string | null>
 }
 
 const defaultDependencies: PlayNeteaseMusicDependencies = {
   search: searchMusic,
   resolveSource: resolveSongSource,
   send: sendSongByMode
+}
+
+/** 创建音乐播放流程依赖对象。 */
+export function createPlayNeteaseMusicDependencies(
+  shortenAudioUrl?: PlayNeteaseMusicDependencies['shortenAudioUrl']
+): PlayNeteaseMusicDependencies {
+  return shortenAudioUrl
+    ? { ...defaultDependencies, shortenAudioUrl }
+    : { ...defaultDependencies }
 }
 
 const silentToolResult = {
@@ -66,6 +76,22 @@ function getEffectiveSendMode(config: Config, sendMode?: ToolSendMode): SendMode
   }
 
   return sendMode
+}
+
+async function getModelAudioUrl(
+  config: Config,
+  src: string,
+  logger: PluginLogger,
+  deps: PlayNeteaseMusicDependencies
+) {
+  if (!config.enableAudioUrlModelShortLink || !deps.shortenAudioUrl) return src
+
+  try {
+    return await deps.shortenAudioUrl(src) || src
+  } catch (error) {
+    logger.warn('本地音频短链生成失败', error)
+    return src
+  }
 }
 
 /** 格式化候选歌曲列表。 */
@@ -118,7 +144,8 @@ async function formatCandidateListWithSources(
 
       try {
         const src = await deps.resolveSource(config, getSourceTarget(song), logger)
-        lines.push(`链接：${src}`)
+        const modelUrl = await getModelAudioUrl(config, src, logger, deps)
+        lines.push(`链接：${modelUrl}`)
       } catch (error) {
         logger.warn('歌曲直链获取失败', error)
         lines.push('链接：获取失败')
@@ -140,7 +167,8 @@ async function returnSongSourceToModel(
 ) {
   try {
     const src = await deps.resolveSource(config, getSourceTarget(selected), logger)
-    return `远程音频链接：${src}`
+    const modelUrl = await getModelAudioUrl(config, src, logger, deps)
+    return `远程音频链接：${modelUrl}`
   } catch (error) {
     logger.warn('歌曲直链获取失败', error)
     return '找到了歌曲，但暂时无法获取播放地址。'

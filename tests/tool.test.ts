@@ -14,6 +14,8 @@ const config: Config = {
   enableNetEaseSearch: true,
   enableQQMusicSearch: false,
   allowAISendMode: true,
+  enableAudioUrlModelShortLink: false,
+  audioShortLinkBaseUrl: '',
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',

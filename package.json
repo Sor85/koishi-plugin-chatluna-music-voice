@@ -27,7 +27,8 @@
       "en": "Provide ChatLuna with a tool to search NetEase Music and send songs as voice messages."
     },
     "service": {
-      "required": ["chatluna"]
+      "required": ["chatluna"],
+      "optional": ["server"]
     }
   },
   "peerDependencies": {

@@ -21,6 +21,8 @@ const config: Config = {
   enableNetEaseSearch: true,
   enableQQMusicSearch: false,
   allowAISendMode: true,
+  enableAudioUrlModelShortLink: false,
+  audioShortLinkBaseUrl: '',
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
@@ -253,7 +255,49 @@ describe('playNeteaseMusic', () => {
     expect(deps.send).not.toHaveBeenCalled()
   })
 
+  it('returns local 302 short URL to model in audio-url-model mode when enabled', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3?token=very-long-token'),
+      send: vi.fn(async () => undefined),
+      shortenAudioUrl: vi.fn(async () => 'http://127.0.0.1:5140/chatluna-music/audio/abc123')
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, {
+        ...singleConfig,
+        enableAudioUrlModelShortLink: true,
+        sendMode: 'audio-url-model'
+      }, '晴天', logger, undefined, deps)
+    ).resolves.toBe('远程音频链接：http://127.0.0.1:5140/chatluna-music/audio/abc123')
+
+    expect(deps.shortenAudioUrl).toHaveBeenCalledWith('https://cdn.example.com/song.mp3?token=very-long-token')
+    expect(deps.send).not.toHaveBeenCalled()
+  })
+
+  it('does not shorten model audio URL when local 302 short link is disabled', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3?token=very-long-token'),
+      send: vi.fn(async () => undefined),
+      shortenAudioUrl: vi.fn(async () => 'http://127.0.0.1:5140/chatluna-music/audio/abc123')
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, {
+        ...singleConfig,
+        sendMode: 'audio-url-model'
+      }, '晴天', logger, undefined, deps)
+    ).resolves.toBe('远程音频链接：https://cdn.example.com/song.mp3?token=very-long-token')
+
+    expect(deps.shortenAudioUrl).not.toHaveBeenCalled()
+  })
+
   it('returns candidate list with remote audio URLs in audio-url-model mode', async () => {
+    const shortLinkConfig = {
+      ...config,
+      enableAudioUrlModelShortLink: true
+    }
     const deps = {
       search: vi.fn(async () => [song, anotherSong]),
       resolveSource: vi.fn(async (_cfg: Config, id: number | SongData) =>
@@ -265,18 +309,21 @@ describe('playNeteaseMusic', () => {
     } satisfies PlayNeteaseMusicDependencies
 
     await expect(
-      playNeteaseMusic(session, config, '晴天', logger, undefined, deps, 'audio-url-model')
+      playNeteaseMusic(session, shortLinkConfig, '晴天', logger, undefined, {
+        ...deps,
+        shortenAudioUrl: vi.fn(async (url: string) => url.replace('https://cdn.example.com', 'http://127.0.0.1:5140/chatluna-music/audio'))
+      }, 'audio-url-model')
     ).resolves.toBe(
       '找到以下候选歌曲：\n'
       + '1. 晴天 - 周杰伦（叶惠美）\n'
-      + '链接：https://cdn.example.com/song.mp3\n'
+      + '链接：http://127.0.0.1:5140/chatluna-music/audio/song.mp3\n'
       + '2. 晴天 Live - 周杰伦（演唱会）\n'
-      + '链接：https://cdn.example.com/live.mp3\n\n'
+      + '链接：http://127.0.0.1:5140/chatluna-music/audio/live.mp3\n\n'
       + '请直接从以上链接中选择，不要再次调用本工具传入 index。'
     )
 
-    expect(deps.resolveSource).toHaveBeenCalledWith(config, 186016, logger)
-    expect(deps.resolveSource).toHaveBeenCalledWith(config, 2, logger)
+    expect(deps.resolveSource).toHaveBeenCalledWith(shortLinkConfig, 186016, logger)
+    expect(deps.resolveSource).toHaveBeenCalledWith(shortLinkConfig, 2, logger)
     expect(deps.send).not.toHaveBeenCalled()
   })
 

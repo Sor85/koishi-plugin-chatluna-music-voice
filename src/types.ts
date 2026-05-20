@@ -15,6 +15,8 @@ export interface Config {
   enableNetEaseSearch: boolean
   enableQQMusicSearch: boolean
   allowAISendMode: boolean
+  enableAudioUrlModelShortLink: boolean
+  audioShortLinkBaseUrl: string
   sourceMode: SourceMode
   customMetingApi: string
   sendMode: SendMode

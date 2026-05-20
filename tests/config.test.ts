@@ -40,4 +40,15 @@ describe('Config', () => {
     expect(schema).toContain('"allowAISendMode"')
     expect(schema).toContain('"default":false')
   })
+
+  it('disables audio-url-model short links by default and explains the OneBot boundary', () => {
+    const schema = stringifyConfigSchema()
+
+    expect(schema).toContain('启用 audio-url-model 本地 302 短链')
+    expect(schema).toContain('仅影响“返回远程音频链接给模型”')
+    expect(schema).toContain('OneBot 必须能访问')
+    expect(schema).toContain('"enableAudioUrlModelShortLink"')
+    expect(schema).toContain('"audioShortLinkBaseUrl"')
+    expect(schema).toContain('"default":false')
+  })
 })

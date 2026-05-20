@@ -43,7 +43,7 @@ export const Config = Schema.intersect([
 
   Schema.object({
     allowAISendMode: Schema.boolean()
-      .description('允许 AI 临时切换发送方式。关闭后工具不会向 AI 暴露 sendMode 参数，并始终使用下方默认歌曲发送方式。')
+      .description('允许 AI 临时切换发送方式。关闭后工具不会向 AI 暴露 sendMode 参数，并始终使用下方默认歌曲发送方式')
       .default(false),
     sendMode: Schema.union([
       Schema.const('audio-buffer').description('下载音频后发送语音'),
@@ -54,7 +54,14 @@ export const Config = Schema.intersect([
     ])
       .role('radio')
       .description('默认歌曲发送方式。关闭 AI 临时切换时始终使用此选项')
-      .default('audio-buffer')
+      .default('audio-buffer'),
+    enableAudioUrlModelShortLink: Schema.boolean()
+      .description('启用 audio-url-model 本地 302 短链。仅影响“返回远程音频链接给模型”；OneBot 必须能访问 Koishi 的短链地址，否则请保持关闭。')
+      .default(false),
+    audioShortLinkBaseUrl: Schema.string()
+      .role('link')
+      .description('本地 302 短链的访问基础地址，留空时使用 Koishi server.selfUrl。OneBot 和 Koishi 在同一局域网时可填写 OneBot 能访问的 Koishi 地址，例如 http://192.168.1.10:5140')
+      .default('')
   }).description('发送设置'),
 
   Schema.object({
