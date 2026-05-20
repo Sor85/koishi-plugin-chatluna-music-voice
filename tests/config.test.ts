@@ -25,10 +25,19 @@ describe('Config', () => {
     expect(schema).toContain('不稳定')
   })
 
-  it('tells the model to pass default sendMode for normal tool calls', () => {
+  it('does not ask the model to pass sendMode in default frontend description', () => {
     const schema = stringifyConfigSchema()
 
-    expect(schema).toContain('sendMode 请传 default')
-    expect(schema).toContain('Koishi 前端中用户选择的默认发送方式')
+    expect(schema).not.toContain('sendMode 请传 default')
+    expect(schema).toContain('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片。')
+  })
+
+  it('disables AI sendMode parameter by default in frontend config', () => {
+    const schema = stringifyConfigSchema()
+
+    expect(schema).toContain('允许 AI 临时切换发送方式')
+    expect(schema).toContain('关闭后工具不会向 AI 暴露 sendMode 参数')
+    expect(schema).toContain('"allowAISendMode"')
+    expect(schema).toContain('"default":false')
   })
 })

@@ -12,7 +12,7 @@ export const Config = Schema.intersect([
       .default(DEFAULT_TOOL_NAME),
     toolDescription: Schema.string()
       .description('显示在 ChatLuna 工具列表中的描述')
-      .default('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；没有要求切换发送方式时，sendMode 请传 default；default 表示使用 Koishi 前端中用户选择的默认发送方式；audio-url-model 模式返回链接后不要再次传 index 调用工具。'),
+      .default('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片。'),
     searchLimit: Schema.natural()
       .min(1)
       .max(10)
@@ -42,6 +42,9 @@ export const Config = Schema.intersect([
   }).description('请求设置'),
 
   Schema.object({
+    allowAISendMode: Schema.boolean()
+      .description('允许 AI 临时切换发送方式。关闭后工具不会向 AI 暴露 sendMode 参数，并始终使用下方默认歌曲发送方式。')
+      .default(false),
     sendMode: Schema.union([
       Schema.const('audio-buffer').description('下载音频后发送语音'),
       Schema.const('audio-url-model').description('返回远程音频链接给模型'),
@@ -50,7 +53,7 @@ export const Config = Schema.intersect([
       Schema.const('music-card').description('按歌曲来源发送音乐卡片')
     ])
       .role('radio')
-      .description('默认歌曲发送方式，AI 调用工具时可临时选择其他发送方式')
+      .description('默认歌曲发送方式。关闭 AI 临时切换时始终使用此选项')
       .default('audio-buffer')
   }).description('发送设置'),
 

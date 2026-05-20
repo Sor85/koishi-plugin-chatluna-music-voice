@@ -14,6 +14,7 @@ export interface Config {
   searchLimit: number
   enableNetEaseSearch: boolean
   enableQQMusicSearch: boolean
+  allowAISendMode: boolean
   sourceMode: SourceMode
   customMetingApi: string
   sendMode: SendMode

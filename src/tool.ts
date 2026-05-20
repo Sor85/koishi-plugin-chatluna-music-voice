@@ -13,7 +13,7 @@ import { playNeteaseMusic } from './player'
 import type { Config, MusicToolInput, MusicToolResult, PluginLogger, SendMode } from './types'
 
 const TOOL_REGISTRATION_DESCRIPTION =
-  '用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；没有要求切换发送方式时，sendMode 请传 default；default 表示使用 Koishi 前端中用户选择的默认发送方式；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
+  '用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片。'
 
 const TOOL_REGISTRATION_META = {
   source: 'extension',
@@ -39,17 +39,35 @@ function getAudioUrlModelRegistrationNote(defaultSendMode: SendMode) {
     : '只有显式使用 audio-url-model 时，返回链接后才不要再次传 index 调用工具。'
 }
 
-function getToolDescription(defaultSendMode: SendMode) {
-  return `搜索已启用的音乐平台。没有明确要求切换发送方式时，请将 sendMode 设为 default。当前 Koishi 前端默认发送方式：default = ${defaultSendMode}。普通发送模式下，如果工具返回不带链接的编号候选列表，请用相同 query 和用户选择的 index 再次调用工具，以在当前聊天发送整首歌曲音频、语音或音乐卡片。${getAudioUrlModelToolNote(defaultSendMode)}输入参数为 query，以及可选 index。`
+function getDisabledSendModeToolNote(defaultSendMode: SendMode) {
+  return defaultSendMode === 'audio-url-model'
+    ? '如果候选结果包含可直接选择的远程音频链接，拿到这些链接后不要再次传 index 调用工具。'
+    : '如果工具返回不带链接的编号候选列表，请用相同 query 和用户选择的 index 再次调用工具。'
+}
+
+function getToolDescription(defaultSendMode: SendMode, allowAISendMode: boolean) {
+  if (!allowAISendMode) {
+    return `搜索已启用的音乐平台。${getDisabledSendModeToolNote(defaultSendMode)}`
+  }
+
+  return `搜索已启用的音乐平台。没有明确要求切换发送方式时，请将 sendMode 设为 default。当前 default = ${defaultSendMode}。如果工具返回不带链接的编号候选列表，请用相同 query 和用户需要的 index 再次调用工具，以在当前聊天发送整首歌曲音频、语音或音乐卡片。${getAudioUrlModelToolNote(defaultSendMode)}`
 }
 
 function getRegistrationDescription(config: Config) {
   const baseDescription = config.toolDescription.trim() || TOOL_REGISTRATION_DESCRIPTION
+  if (!config.allowAISendMode) {
+    const disabledBaseDescription = baseDescription
+      .replace(/[^。；]*sendMode 请传 default[^。；]*(?:[。；]|$)/g, '')
+      .trim() || TOOL_REGISTRATION_DESCRIPTION
+
+    return `${disabledBaseDescription} ${getDisabledSendModeToolNote(config.sendMode)}`
+  }
+
   return `${baseDescription} 当前 Koishi 前端默认发送方式：default = ${config.sendMode}。${getAudioUrlModelRegistrationNote(config.sendMode)}`
 }
 
-function createMusicToolSchema(defaultSendMode: SendMode) {
-  return z.object({
+function createMusicToolSchema(defaultSendMode: SendMode, allowAISendMode: boolean) {
+  const baseSchema = {
     query: z
       .string()
       .min(1)
@@ -59,15 +77,23 @@ function createMusicToolSchema(defaultSendMode: SendMode) {
       .int()
       .min(1)
       .optional()
-      .describe('上一轮不带链接的候选列表中的歌曲序号，从 1 开始。audio-url-model 结果已包含可用链接，不要为这种结果传 index。'),
+      .describe('上一轮不带链接的候选列表中的歌曲序号，从 1 开始。audio-url-model 结果已包含可用链接，不要为这种结果传 index。')
+  }
+
+  if (!allowAISendMode) {
+    return z.object(baseSchema)
+  }
+
+  return z.object({
+    ...baseSchema,
     sendMode: z
       .enum(['default', 'audio-buffer', 'audio-url-model', 'audio-url', 'file', 'music-card'])
       .default('default')
-      .describe(`本次调用的歌曲发送方式。没有明确要求切换发送方式时，请将 sendMode 设为 default。当前 Koishi 前端默认发送方式：default = ${defaultSendMode}。audio-buffer 会下载音频后发送语音，audio-url-model 会把远程音频链接返回给模型；拿到这些链接后不要再次传 index 调用工具。audio-url 会发送远程音频 URL 文本，file 会把远程音频 URL 作为文件发送，music-card 会按歌曲来源发送音乐卡片。`)
+      .describe(`本次调用的歌曲发送方式。没有明确要求切换发送方式时，请将 sendMode 设为 default。当前 default = ${defaultSendMode}。audio-buffer 会下载音频后发送语音，audio-url-model 会把远程音频链接返回给模型；拿到这些链接后不要再次传 index 调用工具。audio-url 会发送远程音频 URL 文本，file 会把远程音频 URL 作为文件发送，music-card 会按歌曲来源发送音乐卡片。`)
   })
 }
 
-const musicToolSchema = createMusicToolSchema('audio-buffer')
+const musicToolSchema = createMusicToolSchema('audio-buffer', false)
 
 /** 搜索并发送网易云音乐的实际执行函数签名。 */
 export type PlayMusicFunction = (
@@ -87,7 +113,7 @@ export class ChatLunaMusicTool extends StructuredTool<
   MusicToolResult
 > {
   name: string
-  description = getToolDescription('audio-buffer')
+  description = getToolDescription('audio-buffer', false)
   schema = musicToolSchema
 
   constructor(
@@ -97,8 +123,8 @@ export class ChatLunaMusicTool extends StructuredTool<
   ) {
     super()
     this.name = config.toolName.trim() || DEFAULT_TOOL_NAME
-    this.description = getToolDescription(config.sendMode)
-    this.schema = createMusicToolSchema(config.sendMode)
+    this.description = getToolDescription(config.sendMode, config.allowAISendMode)
+    this.schema = createMusicToolSchema(config.sendMode, config.allowAISendMode)
   }
 
   async _call(
@@ -118,7 +144,7 @@ export class ChatLunaMusicTool extends StructuredTool<
       input.query,
       this.logger,
       input.index,
-      input.sendMode
+      this.config.allowAISendMode ? input.sendMode : undefined
     )
   }
 }

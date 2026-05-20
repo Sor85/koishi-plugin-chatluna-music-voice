@@ -61,7 +61,11 @@ function formatSongLine(song: SongData, index: number) {
 }
 
 function getEffectiveSendMode(config: Config, sendMode?: ToolSendMode): SendMode {
-  return sendMode === undefined || sendMode === 'default' ? config.sendMode : sendMode
+  if (!config.allowAISendMode || sendMode === undefined || sendMode === 'default') {
+    return config.sendMode
+  }
+
+  return sendMode
 }
 
 /** 格式化候选歌曲列表。 */

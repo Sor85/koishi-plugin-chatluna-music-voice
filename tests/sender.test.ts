@@ -18,6 +18,7 @@ const baseConfig: Config = {
   searchLimit: 5,
   enableNetEaseSearch: true,
   enableQQMusicSearch: false,
+  allowAISendMode: true,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',

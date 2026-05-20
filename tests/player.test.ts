@@ -20,6 +20,7 @@ const config: Config = {
   searchLimit: 5,
   enableNetEaseSearch: true,
   enableQQMusicSearch: false,
+  allowAISendMode: true,
   sourceMode: 'preset',
   customMetingApi: 'https://example.com/meting/',
   sendMode: 'audio-url',
@@ -170,6 +171,28 @@ describe('playNeteaseMusic', () => {
       session,
       'https://cdn.example.com/song.mp3',
       singleConfig
+    )
+  })
+
+  it('ignores requested send mode when AI send mode parameter is disabled', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+    const disabledConfig = {
+      ...singleConfig,
+      allowAISendMode: false
+    }
+
+    await expect(
+      playNeteaseMusic(session, disabledConfig, '晴天', logger, undefined, deps, 'file')
+    ).resolves.toBe('已发送：晴天 - 周杰伦')
+
+    expect(deps.send).toHaveBeenCalledWith(
+      session,
+      'https://cdn.example.com/song.mp3',
+      disabledConfig
     )
   })
 
