@@ -26,6 +26,15 @@ const logger: PluginLogger = {
   error: vi.fn()
 }
 
+function getToolPromptText(tool: ChatLunaMusicTool) {
+  return [
+    tool.description,
+    tool.schema.shape.query.description,
+    tool.schema.shape.index.description,
+    tool.schema.shape.sendMode.description
+  ].join('\n')
+}
+
 describe('ChatLunaMusicTool', () => {
   it('returns a session error when current session is missing', async () => {
     const tool = new ChatLunaMusicTool(config, logger, vi.fn())
@@ -76,19 +85,57 @@ describe('ChatLunaMusicTool', () => {
     })).not.toThrow()
   })
 
+  it('accepts default as the tool send mode default value', () => {
+    const tool = new ChatLunaMusicTool(config, logger, vi.fn())
+
+    expect(tool.schema.parse({
+      query: '晴天'
+    }).sendMode).toBe('default')
+    expect(() => tool.schema.parse({
+      query: '晴天',
+      sendMode: 'default'
+    })).not.toThrow()
+  })
+
   it('tells the model not to call index after audio-url-model links are returned', () => {
     const tool = new ChatLunaMusicTool(config, logger, vi.fn())
 
-    expect(tool.description).toContain('Do not call this tool again with index')
-    expect(tool.schema.shape.index.description).toContain('Do not use index for audio-url-model')
-    expect(tool.schema.shape.sendMode.description).toContain('do not call the tool again with index')
+    expect(tool.description).toContain('不要再次传 index 调用工具')
+    expect(tool.schema.shape.index.description).toContain('audio-url-model 结果已包含可用链接')
+    expect(tool.schema.shape.sendMode.description).toContain('不要再次传 index 调用工具')
   })
 
-  it('tells the model to omit sendMode unless the user explicitly asks', () => {
+  it('tells the model to use default sendMode unless the user explicitly asks', () => {
     const tool = new ChatLunaMusicTool(config, logger, vi.fn())
 
-    expect(tool.description).toContain('Do not set sendMode unless the user explicitly asks')
-    expect(tool.schema.shape.sendMode.description).toContain('Do not set sendMode unless the user explicitly asks')
+    expect(tool.description).toContain('sendMode 设为 default')
+    expect(tool.schema.shape.sendMode.description).toContain('sendMode 设为 default')
+    expect(tool.schema.shape.sendMode.description).toContain('Koishi 前端')
+  })
+
+  it('tells the model what default sendMode currently resolves to', () => {
+    const tool = new ChatLunaMusicTool({
+      ...config,
+      sendMode: 'audio-url-model'
+    }, logger, vi.fn())
+
+    expect(tool.description).toContain('default = audio-url-model')
+    expect(tool.description).toContain('不要再次传 index 调用工具')
+    expect(tool.schema.shape.sendMode.description).toContain('default = audio-url-model')
+    expect(tool.schema.shape.sendMode.description).toContain('不要再次传 index 调用工具')
+  })
+
+  it('uses Chinese text for all tool prompt descriptions', () => {
+    const tool = new ChatLunaMusicTool(config, logger, vi.fn())
+    const promptText = getToolPromptText(tool)
+
+    expect(promptText).toContain('搜索已启用的音乐平台')
+    expect(promptText).toContain('歌曲名、歌手名、风格或自然语言音乐搜索词')
+    expect(promptText).not.toContain('Search enabled music platforms')
+    expect(promptText).not.toContain('Unless the user explicitly asks')
+    expect(promptText).not.toContain('Candidate song number')
+    expect(promptText).not.toContain('Optional song sending mode')
+    expect(promptText).not.toContain('Song name, artist name')
   })
 })
 
@@ -110,7 +157,7 @@ describe('registerChatLunaMusicTool', () => {
     expect(registerTool).toHaveBeenCalledWith(
       'music_voice',
       expect.objectContaining({
-        description: '自定义音乐工具描述。',
+        description: expect.stringContaining('自定义音乐工具描述。'),
         meta: {
           source: 'extension',
           group: 'music',
@@ -127,6 +174,36 @@ describe('registerChatLunaMusicTool', () => {
       })
     )
     expect(on).toHaveBeenCalledWith('dispose', dispose)
+  })
+
+  it('appends current default sendMode to custom registration description', () => {
+    const dispose = vi.fn()
+    const registerTool = vi.fn(() => dispose)
+    const on = vi.fn()
+    const ctx = {
+      chatluna: {
+        platform: { registerTool }
+      },
+      on
+    } as unknown as Context
+
+    registerChatLunaMusicTool(ctx, {
+      ...config,
+      sendMode: 'audio-url-model'
+    }, logger)
+
+    expect(registerTool).toHaveBeenCalledWith(
+      'music_voice',
+      expect.objectContaining({
+        description: expect.stringContaining('default = audio-url-model')
+      })
+    )
+    expect(registerTool).toHaveBeenCalledWith(
+      'music_voice',
+      expect.objectContaining({
+        description: expect.stringContaining('不要再次传 index')
+      })
+    )
   })
 
   it('falls back to default description when configured description is blank', () => {
@@ -149,7 +226,13 @@ describe('registerChatLunaMusicTool', () => {
     expect(registerTool).toHaveBeenCalledWith(
       'music_voice',
       expect.objectContaining({
-        description: '用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；除非用户明确要求切换发送方式，否则不要传 sendMode；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
+        description: expect.stringContaining('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片')
+      })
+    )
+    expect(registerTool).toHaveBeenCalledWith(
+      'music_voice',
+      expect.objectContaining({
+        description: expect.stringContaining('default = audio-url')
       })
     )
   })

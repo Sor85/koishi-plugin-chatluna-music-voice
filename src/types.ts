@@ -6,6 +6,7 @@ export type SourceMode = 'preset' | 'custom'
 export type MusicPlatform = 'netease' | 'qq'
 
 export type SendMode = 'audio-buffer' | 'audio-url-model' | 'audio-url' | 'file' | 'music-card'
+export type ToolSendMode = SendMode | 'default'
 
 export interface Config {
   toolName: string
@@ -22,7 +23,7 @@ export interface Config {
 export interface MusicToolInput {
   query: string
   index?: number
-  sendMode?: SendMode
+  sendMode?: ToolSendMode
 }
 
 export interface SilentToolResult {

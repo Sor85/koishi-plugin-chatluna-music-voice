@@ -5,7 +5,7 @@ import type { Session } from 'koishi'
 
 import { searchMusic, resolveSongSource } from './network'
 import { sendSongByMode } from './sender'
-import type { Config, MusicCardPayload, MusicPlatform, MusicToolResult, PluginLogger, SendMode, SongData } from './types'
+import type { Config, MusicCardPayload, MusicPlatform, MusicToolResult, PluginLogger, SendMode, SongData, ToolSendMode } from './types'
 
 /** 音乐播放流程的可替换依赖，便于测试和解耦。 */
 export interface PlayNeteaseMusicDependencies {
@@ -58,6 +58,10 @@ function getPlatformTitle(platform: MusicPlatform) {
 
 function formatSongLine(song: SongData, index: number) {
   return `${index + 1}. ${song.name} - ${song.artists}（${song.albumName}）`
+}
+
+function getEffectiveSendMode(config: Config, sendMode?: ToolSendMode): SendMode {
+  return sendMode === undefined || sendMode === 'default' ? config.sendMode : sendMode
 }
 
 /** 格式化候选歌曲列表。 */
@@ -146,10 +150,11 @@ async function sendSelectedSong(
   selected: SongData,
   logger: PluginLogger,
   deps: PlayNeteaseMusicDependencies,
-  sendMode?: SendMode,
+  sendMode?: ToolSendMode,
   silentResult = false
 ): Promise<MusicToolResult> {
-  const effectiveConfig = sendMode === undefined ? config : { ...config, sendMode }
+  const effectiveSendMode = getEffectiveSendMode(config, sendMode)
+  const effectiveConfig = effectiveSendMode === config.sendMode ? config : { ...config, sendMode: effectiveSendMode }
 
   if (effectiveConfig.sendMode === 'music-card') {
     try {
@@ -190,8 +195,8 @@ export async function playNeteaseMusic(
   query: string,
   logger: PluginLogger,
   index?: number,
-  sendModeOrDeps?: SendMode | PlayNeteaseMusicDependencies,
-  depsOrSendMode?: PlayNeteaseMusicDependencies | SendMode
+  sendModeOrDeps?: ToolSendMode | PlayNeteaseMusicDependencies,
+  depsOrSendMode?: PlayNeteaseMusicDependencies | ToolSendMode
 ) {
   const sendMode = typeof sendModeOrDeps === 'string'
     ? sendModeOrDeps
@@ -203,7 +208,7 @@ export async function playNeteaseMusic(
     : typeof depsOrSendMode === 'object'
       ? depsOrSendMode
       : defaultDependencies
-  const effectiveSendMode = sendMode ?? config.sendMode
+  const effectiveSendMode = getEffectiveSendMode(config, sendMode)
   const normalizedQuery = query.trim()
 
   if (!normalizedQuery) {

@@ -10,10 +10,10 @@ import { z } from 'zod/v3'
 
 import { DEFAULT_TOOL_NAME } from './constants'
 import { playNeteaseMusic } from './player'
-import type { Config, MusicToolInput, MusicToolResult, PluginLogger } from './types'
+import type { Config, MusicToolInput, MusicToolResult, PluginLogger, SendMode } from './types'
 
 const TOOL_REGISTRATION_DESCRIPTION =
-  '用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；除非用户明确要求切换发送方式，否则不要传 sendMode；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
+  '用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；没有要求切换发送方式时，sendMode 请传 default；default 表示使用 Koishi 前端中用户选择的默认发送方式；audio-url-model 模式返回链接后不要再次传 index 调用工具。'
 
 const TOOL_REGISTRATION_META = {
   source: 'extension',
@@ -27,22 +27,47 @@ const TOOL_REGISTRATION_META = {
   }
 }
 
-const musicToolSchema = z.object({
-  query: z
-    .string()
-    .min(1)
-    .describe('Song name, artist name, style, or natural language music search query.'),
-  index: z
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .describe('Candidate song number from a previous result list without links, starting from 1. Do not use index for audio-url-model results because those results already contain usable links.'),
-  sendMode: z
-    .enum(['audio-buffer', 'audio-url-model', 'audio-url', 'file', 'music-card'])
-    .optional()
-    .describe('Optional song sending mode for this call. Do not set sendMode unless the user explicitly asks for a different sending mode; otherwise omit it and use the Koishi default. audio-buffer sends voice after downloading audio, audio-url-model returns remote audio URLs to the model; after those links are returned, do not call the tool again with index. audio-url sends the remote audio URL as text, file sends the remote audio URL as a file, and music-card sends a platform music card.')
-})
+function getAudioUrlModelToolNote(defaultSendMode: SendMode) {
+  return defaultSendMode === 'audio-url-model'
+    ? '因为 default = audio-url-model，候选结果会返回可直接选择的远程音频链接；拿到这些链接后不要再次传 index 调用工具。'
+    : '在 audio-url-model 模式下，候选结果会返回可直接选择的远程音频链接；拿到这些链接后不要再次传 index 调用工具。'
+}
+
+function getAudioUrlModelRegistrationNote(defaultSendMode: SendMode) {
+  return defaultSendMode === 'audio-url-model'
+    ? '因为 default = audio-url-model，候选结果会返回可直接选择的远程音频链接；拿到这些链接后不要再次传 index 调用工具。'
+    : '只有显式使用 audio-url-model 时，返回链接后才不要再次传 index 调用工具。'
+}
+
+function getToolDescription(defaultSendMode: SendMode) {
+  return `搜索已启用的音乐平台。没有明确要求切换发送方式时，请将 sendMode 设为 default。当前 Koishi 前端默认发送方式：default = ${defaultSendMode}。普通发送模式下，如果工具返回不带链接的编号候选列表，请用相同 query 和用户选择的 index 再次调用工具，以在当前聊天发送整首歌曲音频、语音或音乐卡片。${getAudioUrlModelToolNote(defaultSendMode)}输入参数为 query，以及可选 index。`
+}
+
+function getRegistrationDescription(config: Config) {
+  const baseDescription = config.toolDescription.trim() || TOOL_REGISTRATION_DESCRIPTION
+  return `${baseDescription} 当前 Koishi 前端默认发送方式：default = ${config.sendMode}。${getAudioUrlModelRegistrationNote(config.sendMode)}`
+}
+
+function createMusicToolSchema(defaultSendMode: SendMode) {
+  return z.object({
+    query: z
+      .string()
+      .min(1)
+      .describe('歌曲名、歌手名、风格或自然语言音乐搜索词。'),
+    index: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe('上一轮不带链接的候选列表中的歌曲序号，从 1 开始。audio-url-model 结果已包含可用链接，不要为这种结果传 index。'),
+    sendMode: z
+      .enum(['default', 'audio-buffer', 'audio-url-model', 'audio-url', 'file', 'music-card'])
+      .default('default')
+      .describe(`本次调用的歌曲发送方式。没有明确要求切换发送方式时，请将 sendMode 设为 default。当前 Koishi 前端默认发送方式：default = ${defaultSendMode}。audio-buffer 会下载音频后发送语音，audio-url-model 会把远程音频链接返回给模型；拿到这些链接后不要再次传 index 调用工具。audio-url 会发送远程音频 URL 文本，file 会把远程音频 URL 作为文件发送，music-card 会按歌曲来源发送音乐卡片。`)
+  })
+}
+
+const musicToolSchema = createMusicToolSchema('audio-buffer')
 
 /** 搜索并发送网易云音乐的实际执行函数签名。 */
 export type PlayMusicFunction = (
@@ -62,8 +87,7 @@ export class ChatLunaMusicTool extends StructuredTool<
   MusicToolResult
 > {
   name: string
-  description =
-    'Search enabled music platforms with a query. Do not set sendMode unless the user explicitly asks for a different sending mode; otherwise omit it and use the Koishi default. For normal sending modes, if the tool returns a numbered candidate list without links, call it again with the same query and the chosen index to send that full song as audio, voice, or a music card in the current chat. In audio-url-model mode, candidate lists include remote audio URLs for the model to choose directly. Do not call this tool again with index after audio-url-model links are returned. Input is query and optional index.'
+  description = getToolDescription('audio-buffer')
   schema = musicToolSchema
 
   constructor(
@@ -73,6 +97,8 @@ export class ChatLunaMusicTool extends StructuredTool<
   ) {
     super()
     this.name = config.toolName.trim() || DEFAULT_TOOL_NAME
+    this.description = getToolDescription(config.sendMode)
+    this.schema = createMusicToolSchema(config.sendMode)
   }
 
   async _call(
@@ -104,7 +130,7 @@ export function registerChatLunaMusicTool(
   logger: PluginLogger
 ) {
   const toolName = config.toolName.trim() || DEFAULT_TOOL_NAME
-  const toolDescription = config.toolDescription.trim() || TOOL_REGISTRATION_DESCRIPTION
+  const toolDescription = getRegistrationDescription(config)
   const dispose = ctx.chatluna.platform.registerTool(toolName, {
     description: toolDescription,
     createTool() {

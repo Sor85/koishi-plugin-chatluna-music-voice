@@ -24,4 +24,11 @@ describe('Config', () => {
     expect(schema).toContain('启用 QQ 音乐搜索')
     expect(schema).toContain('不稳定')
   })
+
+  it('tells the model to pass default sendMode for normal tool calls', () => {
+    const schema = stringifyConfigSchema()
+
+    expect(schema).toContain('sendMode 请传 default')
+    expect(schema).toContain('Koishi 前端中用户选择的默认发送方式')
+  })
 })

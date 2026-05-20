@@ -155,6 +155,24 @@ describe('playNeteaseMusic', () => {
     expect(singleConfig.sendMode).toBe('audio-url')
   })
 
+  it('uses configured send mode when tool send mode is default', async () => {
+    const deps = {
+      search: vi.fn(async () => [song]),
+      resolveSource: vi.fn(async () => 'https://cdn.example.com/song.mp3'),
+      send: vi.fn(async () => undefined)
+    } satisfies PlayNeteaseMusicDependencies
+
+    await expect(
+      playNeteaseMusic(session, singleConfig, '晴天', logger, undefined, deps, 'default')
+    ).resolves.toBe('已发送：晴天 - 周杰伦')
+
+    expect(deps.send).toHaveBeenCalledWith(
+      session,
+      'https://cdn.example.com/song.mp3',
+      singleConfig
+    )
+  })
+
   it('sends NetEase card without resolving audio source in music-card mode', async () => {
     const deps = {
       search: vi.fn(async () => [song]),

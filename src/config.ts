@@ -12,7 +12,7 @@ export const Config = Schema.intersect([
       .default(DEFAULT_TOOL_NAME),
     toolDescription: Schema.string()
       .description('显示在 ChatLuna 工具列表中的描述')
-      .default('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；除非用户明确要求切换发送方式，否则不要传 sendMode；audio-url-model 模式返回链接后不要再次传 index 调用工具。'),
+      .default('用于搜索网易云音乐或 QQ 音乐并在当前聊天中发送整首歌曲音频、语音或音乐卡片；没有要求切换发送方式时，sendMode 请传 default；default 表示使用 Koishi 前端中用户选择的默认发送方式；audio-url-model 模式返回链接后不要再次传 index 调用工具。'),
     searchLimit: Schema.natural()
       .min(1)
       .max(10)
